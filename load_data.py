@@ -5,6 +5,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms, utils
+from PIL import Image
 
 # Ignore warnings
 import warnings
@@ -89,10 +90,18 @@ class AugmentImage(object):
         toPIL = transforms.ToPILImage()
         sketch = toPIL(sketch)
         photo = toPIL(photo)
-        # ramdom rotate between [-15, 15]
-        angle = 30 * np.random.random_sample() - 15
-        sketch = sketch.rotate(angle)
-        photo = photo.rotate(angle)
+        # # ramdom rotate between [-15, 15]
+        # angle = 30 * np.random.random_sample() - 15
+        # sketch = sketch.rotate(angle)
+        # photo = photo.rotate(angle)
+
+        # random flip
+        hflip = np.random.random() < 0.5
+        if hflip:
+          sketch = sketch.transpose(Image.FLIP_LEFT_RIGHT)
+          photo = photo.transpose(Image.FLIP_LEFT_RIGHT)
+
+
         # random resize between [44, 84]
         output_size = np.random.randint(44, 85)
         resize = transforms.Scale(output_size)  # for pytorch lower version!!!
