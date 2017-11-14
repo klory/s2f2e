@@ -10,4 +10,7 @@ Image size is [128, 128]
 
 Original code: https://github.com/junyanz/pytorch-CycleGAN-and-pix2pix
 
-Refer here for some flip augmentation: https://github.com/pytorch/vision/issues/9
+Refer here for some flip augmentation: 
+- https://github.com/pytorch/vision/issues/9
+- https://github.com/pytorch/tutorials/issues/78
+- http://pytorch.org/tutorials/beginner/data_loading_tutorial.html
