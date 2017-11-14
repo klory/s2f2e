@@ -1,3 +1,4 @@
+from __future__ import print_function
 import torch
 import torch.nn as nn
 import functools
@@ -27,6 +28,7 @@ net_D = NLayerDiscriminator(input_nc, norm_layer=norm, use_sigmoid=use_sigmoid)
 
 transformed_dataset = EFGDataset(mode='training',
         transform=transforms.Compose([ToTensor(),
+                                    AugmentImage(),
                                     Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])]))
 
 
@@ -34,12 +36,11 @@ data_loader = torch.utils.data.DataLoader(transformed_dataset, batch_size=batch_
 
 transformed_dataset_test = EFGDataset(mode='testing',
         transform=transforms.Compose([ToTensor(),
+                                    AugmentImage(),
                                     Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])]))
 
 
 data_loader_test = torch.utils.data.DataLoader(transformed_dataset_test, batch_size=batch_size, shuffle=False)
-
-#print 'complete data preprocess, mean of first pic: ', np.mean(dataSet[0]['A'].numpy()), np.mean(dataSet[0]['smile'].numpy()), np.mean(dataSet[0]['anger'].numpy()), np.mean(dataSet[0]['scream'].numpy())
 
 
 # save generated images
@@ -102,7 +103,7 @@ optimizer_D = torch.optim.RMSprop(net_D.parameters(), lr=lr)
 num_train = 5
 epoch = 100
 for e in range(epoch):
-    print "training epoch: %d" % e
+    print("training epoch: %d" % e)
     for i, data in enumerate(data_loader):
         if i > num_train:
             break
@@ -197,8 +198,8 @@ for e in range(epoch):
         for p in net_D.parameters():
             p.data.clamp_(-0.01, 0.01)
 
-    print 'epoch: %d, it: %d, loss_G: %f, loss_D: %f' % (e, i, loss_G.data[0], loss_D.data[0])
+    print('epoch: %d, it: %d, loss_G: %f, loss_D: %f' % (e, i, loss_G.data[0], loss_D.data[0]))
     if e%5 == 0:
         save_img(e)
 
-print 'testing complete'
+print('testing complete')

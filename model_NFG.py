@@ -1,3 +1,4 @@
+from __future__ import print_function
 import torch
 import torch.nn as nn
 import functools
@@ -31,9 +32,6 @@ transformed_dataset = NFGDataset(mode='training',
             ]))
 data_loader = torch.utils.data.DataLoader(transformed_dataset, batch_size=batch_size, shuffle=False)
                                      
-print 'complete data preprocess, mean and var of first pic: ', np.mean(transformed_dataset[0]['source'].numpy()), np.var(transformed_dataset[0]['target'].numpy())
-
-
 lr = 0.0002
 # betas for Adam
 beta1 = 0.5
@@ -71,9 +69,9 @@ fake_label = 0.0 # labels for fake image, used in loss api
 
 epoch = 30
 for e in range(epoch):
-    print "training epoch: %d" % e
+    print("training epoch: %d" % e)
     for i, data in enumerate(data_loader):
-        print 'iteration %d' % i
+        print('iteration %d' % i)
         input_A = Variable(data['source'])
         input_B = Variable(data['target'])
         # forward of G
@@ -101,8 +99,8 @@ for e in range(epoch):
         loss_G.backward()
         optimizer_G.step()
 
-        print 'epoch: %d, it: %d, G_GAN: %f\t, G_L1: %f\t, D_real: %f\t, D_fake: %f\t' % (e, i, loss_G_GAN.data[0], loss_G_L1.data[0], loss_D_real.data[0], loss_D_fake.data[0])
+        print('epoch: %d, it: %d, G_GAN: %f\t, G_L1: %f\t, D_real: %f\t, D_fake: %f\t' % (e, i, loss_G_GAN.data[0], loss_G_L1.data[0], loss_D_real.data[0], loss_D_fake.data[0]))
     save_img(e)
 
 
-print 'testing complete'
+print('testing complete')
