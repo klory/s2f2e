@@ -1,3 +1,4 @@
+from __future__ import print_function
 import torch
 import torch.nn as nn
 from torch.autograd import Variable
@@ -87,15 +88,6 @@ class ConvTransBlock(nn.Module):
     def forward(self, x):
         return self.model(x)
 
-"""
-input_nc = 3
-ngf = 64
-no_dropout = True
-norm = functools.partial(nn.BatchNorm2d, affine=True)
-
-decoder = Decoder(input_nc, norm_layer=norm)
-print decoder
-"""
 class NLayerDiscriminator(nn.Module):
     def __init__(self, input_nc, ndf=128, n_layers=3, norm_layer=nn.BatchNorm2d, use_sigmoid=False):
         super(NLayerDiscriminator, self).__init__()

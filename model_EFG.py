@@ -1,3 +1,4 @@
+from __future__ import print_function
 import torch
 import torch.nn as nn
 import functools
@@ -32,8 +33,6 @@ transformed_dataset = EFGDataset(mode='training',
 
 data_loader = torch.utils.data.DataLoader(transformed_dataset, batch_size=batch_size, shuffle=False)
 
-
-#print 'complete data preprocess, mean of first pic: ', np.mean(dataSet[0]['A'].numpy()), np.mean(dataSet[0]['smile'].numpy()), np.mean(dataSet[0]['anger'].numpy()), np.mean(dataSet[0]['scream'].numpy())
 
 
 # save generated images
@@ -98,7 +97,7 @@ optimizer_D = torch.optim.Adam(net_D.parameters(), lr=lr, betas=(beta1, beta2))
 
 epoch = 100
 for e in range(epoch):
-    print "training epoch: %d" % e
+    print("training epoch: %d" % e)
     for i, data in enumerate(data_loader):
         # set input of network
         input_A = Variable(data[0]['source'])
@@ -189,8 +188,8 @@ for e in range(epoch):
             loss_G.backward()
             optimizer_G.step()
 
-    print 'epoch: %d, it: %d, loss_G: %f, loss_D: %f' % (e, i, loss_G.data[0], loss_D.data[0])
+    print('epoch: %d, it: %d, loss_G: %f, loss_D: %f' % (e, i, loss_G.data[0], loss_D.data[0]))
     if e%5 == 0:
         save_img(e)
 
-print 'testing complete'
+print('testing complete')
