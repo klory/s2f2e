@@ -45,7 +45,7 @@ optimizer_D = torch.optim.Adam(net_D.parameters(), lr=lr, betas=(beta1, beta2))
 out_dir = '../out/images/neutral/'
 if not os.path.exists(out_dir):
     os.makedirs(out_dir)
-
+num_test = 2
 def save_img(epoch):
     for i, data in enumerate(data_loader):
         if i > num_test:
