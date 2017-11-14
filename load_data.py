@@ -54,7 +54,7 @@ class EFGDataset(Dataset):
         scream_filenames = glob.glob(
             data_folder + "efg_training/expressions/scream/*.jpg")
         if mode == 'testing':  # training
-            p_filenames = glob.glob("data/64/efg_testing/photos/*.jpg")
+            p_filenames = glob.glob(data_folder + "efg_testing/photos/*.jpg")
             smile_filenames = glob.glob(
                 data_folder + "efg_testing/expressions/smile/*.jpg")
             anger_filenames = glob.glob(
@@ -138,7 +138,7 @@ class Normalize(object):
 
 if __name__ == "__main__":
     # test dataloader
-    transformed_dataset = EFGDataset(mode='training',
+    transformed_dataset = EFGDataset(mode='testing',
                                      transform=transforms.Compose([AugmentImage(), ToTensor(), Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])]))
 
     dataloader = DataLoader(transformed_dataset,
