@@ -27,16 +27,16 @@ net_D = NLayerDiscriminator(input_nc, norm_layer=norm, use_sigmoid=use_sigmoid)
 
 
 transformed_dataset = EFGDataset(mode='training',
-        transform=transforms.Compose([ToTensor(),
-                                    AugmentImage(),
+        transform=transforms.Compose([AugmentImage(),
+                                    ToTensor(),
                                     Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])]))
 
 
 data_loader = torch.utils.data.DataLoader(transformed_dataset, batch_size=batch_size, shuffle=False)
 
 transformed_dataset_test = EFGDataset(mode='testing',
-        transform=transforms.Compose([ToTensor(),
-                                    AugmentImage(),
+        transform=transforms.Compose([AugmentImage(),
+                                    ToTensor(),
                                     Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])]))
 
 
