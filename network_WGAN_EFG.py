@@ -13,15 +13,14 @@ Decoder: upsampling
 Discriminator is the same as discriminator in network_NFG.py
 """
 class Encoder(nn.Module):
-    def __init__(self, input_nc, ngf=64, num_downs=7, norm_layer=nn.BatchNorm2d):
+    def __init__(self, input_nc, ngf=64, norm_layer=nn.BatchNorm2d):
         super(Encoder, self).__init__()
         model = []
         model += [ConvBlock(input_nc, ngf, norm_layer=norm_layer, first_layer=True)]
         model += [ConvBlock(ngf, ngf*2, norm_layer=norm_layer)]
         model += [ConvBlock(ngf*2, ngf*4, norm_layer=norm_layer)]
         model += [ConvBlock(ngf*4, ngf*8, norm_layer=norm_layer)]
-        for i in range(num_downs-5):
-            model += [ConvBlock(ngf*8, ngf*8, norm_layer=norm_layer)]
+        model += [ConvBlock(ngf*8, ngf*8, norm_layer=norm_layer)]
         model += [ConvBlock(ngf*8, ngf*8, norm_layer=norm_layer, last_layer=True)]
         self.model = nn.Sequential(*model)
     def forward(self, x):
@@ -48,14 +47,13 @@ class ConvBlock(nn.Module):
 
 
 class Decoder(nn.Module):
-    def __init__(self, input_nc, ngf=128, num_downs=7, norm_layer=nn.BatchNorm2d, use_dropout=False):
+    def __init__(self, input_nc, ngf=64, norm_layer=nn.BatchNorm2d, use_dropout=False):
         super(Decoder, self).__init__()
         model = []
         self.ngf = ngf
         self.linear = nn.Linear(ngf*8+3, ngf*8)
         model += [ConvTransBlock(ngf*8, ngf*8, norm_layer=norm_layer)]
-        for i in range(num_downs-5):
-            model += [ConvTransBlock(ngf*8, ngf*8, norm_layer=norm_layer)]
+        model += [ConvTransBlock(ngf*8, ngf*8, norm_layer=norm_layer)]
         model += [ConvTransBlock(ngf*8, ngf*4, norm_layer=norm_layer)]
         model += [ConvTransBlock(ngf*4, ngf*2, norm_layer=norm_layer)]
         model += [ConvTransBlock(ngf*2, ngf, norm_layer=norm_layer)]

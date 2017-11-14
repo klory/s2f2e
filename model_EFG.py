@@ -11,15 +11,16 @@ from load_data import *
 
 input_nc = 3
 output_nc = 3
-ngf = 64
+ngf = 128
+num_downs = 7
 no_dropout = True
 norm = functools.partial(nn.BatchNorm2d, affine=True)
 use_sigmoid = True
 
 batch_size = 1
 
-encoder_G = Encoder(input_nc, norm_layer=norm)
-decoder_G = Decoder(input_nc, norm_layer=norm, use_dropout=no_dropout)
+encoder_G = Encoder(input_nc, ngf=ngf, num_downs=num_downs, norm_layer=norm)
+decoder_G = Decoder(input_nc, ngf=ngf, num_downs=num_downs, norm_layer=norm, use_dropout=no_dropout)
 net_D = NLayerDiscriminator(input_nc, norm_layer=norm, use_sigmoid=use_sigmoid)
 
 

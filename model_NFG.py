@@ -11,13 +11,13 @@ from load_data import *
 
 input_nc = 3 # number of channels of input(image)
 output_nc = 3 # number of channels of output(image)
-ngf = 64 # number of filters of the first conv layers of generator
+ngf = 128 # number of filters of the first conv layers of generator
 no_dropout = True
 norm = functools.partial(nn.BatchNorm2d, affine=True) # normalize function to use
-num_downs = 6 # downsampling times
+num_downs = 7 # downsampling times
 net_G = Unet_G(input_nc, output_nc, num_downs, ngf, norm_layer=norm, use_dropout=not no_dropout)
-use_sigmoid=True
 
+use_sigmoid=True
 net_D = NLayerDiscriminator(input_nc, norm_layer=norm, use_sigmoid=use_sigmoid)
 
 batch_size = 1
