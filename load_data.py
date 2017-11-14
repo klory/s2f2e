@@ -5,6 +5,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms, utils
+from PIL import Image
 
 # Ignore warnings
 import warnings
@@ -30,8 +31,8 @@ class NFGDataset(Dataset):
     def __getitem__(self, idx):
         s_filename = self.s_filenames[idx]
         p_filename = self.p_filenames[idx]
-        sketch = io.imread(s_filename)
-        photo = io.imread(p_filename)
+        sketch = Image.open(s_filename).convert('RGB')
+        photo = Image.open(p_filename).convert('RGB')
         sample = {'source': sketch, 'target': photo}
         if self.transform:
             sample = self.transform(sample)
@@ -71,8 +72,8 @@ class EFGDataset(Dataset):
     def __getitem__(self, idx):
         p_filename = self.p_filenames[idx]
         e_filename = self.e_filenames[idx]
-        photo = io.imread(p_filename)
-        expression = io.imread(e_filename)
+        photo = Image.open(p_filename).convert('RGB')
+        expression = Image.open(e_filename).convert('RGB')
         sample = {'source': photo, 'target': expression}
 
         if self.transform:
@@ -86,13 +87,21 @@ class EFGDataset(Dataset):
 class AugmentImage(object):
     def __call__(self, sample):
         sketch, photo = sample['source'], sample['target']
-        toPIL = transforms.ToPILImage()
-        sketch = toPIL(sketch)
-        photo = toPIL(photo)
-        # ramdom rotate between [-15, 15]
-        angle = 30 * np.random.random_sample() - 15
-        sketch = sketch.rotate(angle)
-        photo = photo.rotate(angle)
+        # toPIL = transforms.ToPILImage()
+        # sketch = toPIL(sketch)
+        # photo = toPIL(photo)
+        # # ramdom rotate between [-15, 15]
+        # angle = 30 * np.random.random_sample() - 15
+        # sketch = sketch.rotate(angle)
+        # photo = photo.rotate(angle)
+
+        # random flip
+        hflip = np.random.random() < 0.5
+        if hflip:
+          sketch = sketch.transpose(Image.FLIP_LEFT_RIGHT)
+          photo = photo.transpose(Image.FLIP_LEFT_RIGHT)
+
+
         # random resize between [44, 84]
         output_size = np.random.randint(44, 85)
         resize = transforms.Scale(output_size)  # for pytorch lower version!!!
@@ -121,53 +130,11 @@ class Normalize(object):
         return {'source': norm(sketch), 'target': norm(photo)}
 
 
-# # test nfg
-# transformed_dataset = NFGDataset(mode='training',
-#                                 transform=transforms.Compose([
-#                                                     AugmentImage(),
-#                                                     ToTensor(),
-#                                                     # Normalize(mean=[128, 128, 128], std=[128, 128, 128])
-#                                                     ]))
-                                     
-# for i in range(len(transformed_dataset)):
-#     sample = transformed_dataset[i]
-#     print(i, sample['source'].size(), sample['target'].size())
-#     toPIL = transforms.ToPILImage()
-#     sketch = toPIL(sample['source'])
-#     sketch.show()
-#     photo = toPIL(sample['target'])
-#     photo.show()
-#     if i == 1:
-#         break
-
-
-# # test efg
-# transformed_dataset = EFGDataset(mode='training',
-#                                 transform=transforms.Compose([
-#                                                     AugmentImage(),
-#                                                     ToTensor(),
-#                                                     # Normalize(mean=[128, 128, 128], std=[128, 128, 128])
-#                                                     ]))
-                                     
-# for i in range(len(transformed_dataset)):
-#     sample, label = transformed_dataset[i]
-#     print(i, sample['source'].size(), sample['target'].size(), label)
-#     toPIL = transforms.ToPILImage()
-#     sketch = toPIL(sample['source'])
-#     sketch.show()
-#     photo = toPIL(sample['target'])
-#     photo.show()
-#     if i == 1:
-#         break
-
-
 # test dataloader
-transformed_dataset = EFGDataset(mode='training',
-                                transform=transforms.Compose([
-                                                    AugmentImage(),
-                                                    ToTensor(),
-                                                    # Normalize(mean=[128, 128, 128], std=[128, 128, 128])
-                                                    ]))
+transformed_dataset = NFGDataset(mode='training',
+                                transform=transforms.Compose([ AugmentImage(),
+                                                                ToTensor(),
+                                                                Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])]))
 
 dataloader = DataLoader(transformed_dataset, batch_size=4, shuffle=True, num_workers=4)
 
@@ -175,8 +142,6 @@ dataloader = DataLoader(transformed_dataset, batch_size=4, shuffle=True, num_wor
 def show_batch(images, labels=None, classes=None):
     """Show image with landmarks for a batch of samples."""
     sources, targets = images['source'], images['target']
-    batch_size = len(sources)
-    im_size = sources.size(2)
 
     grid = utils.make_grid(sources)
     plt.subplot(211)
@@ -200,13 +165,13 @@ if hasattr(transformed_dataset, 'classes'):
 
 for epoch in range(10):
     for i_batch, sample_batched in enumerate(dataloader, 0):
-        images, labels = sample_batched
-        # images = sample_batched  # NO labels for NFGDataset
+        # images, labels = sample_batched
+        images = sample_batched  # NO labels for NFGDataset
 
         # show 4th batch and stop.
         if i_batch == 3:
             plt.figure()
-            show_batch(images, labels, classes)
-            # show_batch(images)
+            # show_batch(images, labels, classes)
+            show_batch(images)
             plt.show()
             break
