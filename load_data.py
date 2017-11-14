@@ -1,6 +1,3 @@
-import os
-import torch
-from skimage import io, transform
 import numpy as np
 import matplotlib.pyplot as plt
 from torch.utils.data import Dataset, DataLoader
@@ -11,16 +8,22 @@ from PIL import Image
 import warnings
 warnings.filterwarnings("ignore")
 
+image_size = 128
+data_folder = "./data/" + str(image_size) + "/"
+
 
 class NFGDataset(Dataset):
     def __init__(self, mode, transform=None):
         assert mode == 'training' or mode == 'testing'
         import glob
-        self.s_filenames = glob.glob("data/64/nfg_training/sketches/*.jpg")
-        self.p_filenames = glob.glob("data/64/nfg_training/photos/*.jpg")
+        self.s_filenames = glob.glob(
+            data_folder + "nfg_training/sketches/*.jpg")
+        self.p_filenames = glob.glob(data_folder + "nfg_training/photos/*.jpg")
         if mode == 'testing':  # training
-            self.s_filenames = glob.glob("data/64/nfg_testing/sketches/*.jpg")
-            self.p_filenames = glob.glob("data/64/nfg_testing/photos/*.jpg")
+            self.s_filenames = glob.glob(
+                data_folder + "nfg_testing/sketches/*.jpg")
+            self.p_filenames = glob.glob(
+                data_folder + "nfg_testing/photos/*.jpg")
 
         assert len(self.s_filenames) == len(self.p_filenames)
         self.transform = transform
@@ -43,15 +46,21 @@ class EFGDataset(Dataset):
     def __init__(self, mode, transform=None):
         assert mode == 'training' or mode == 'testing'
         import glob
-        p_filenames = glob.glob("data/64/efg_training/photos/*.jpg")
-        smile_filenames = glob.glob("data/64/efg_training/expressions/smile/*.jpg")
-        anger_filenames = glob.glob("data/64/efg_training/expressions/anger/*.jpg")
-        scream_filenames = glob.glob("data/64/efg_training/expressions/scream/*.jpg")
+        p_filenames = glob.glob(data_folder + "efg_training/photos/*.jpg")
+        smile_filenames = glob.glob(
+            data_folder + "efg_training/expressions/smile/*.jpg")
+        anger_filenames = glob.glob(
+            data_folder + "efg_training/expressions/anger/*.jpg")
+        scream_filenames = glob.glob(
+            data_folder + "efg_training/expressions/scream/*.jpg")
         if mode == 'testing':  # training
             p_filenames = glob.glob("data/64/efg_testing/photos/*.jpg")
-            smile_filenames = glob.glob("data/64/efg_testing/expressions/smile/*.jpg")
-            anger_filenames = glob.glob("data/64/efg_testing/expressions/anger/*.jpg")
-            scream_filenames = glob.glob("data/64/efg_testing/expressions/scream/*.jpg")
+            smile_filenames = glob.glob(
+                data_folder + "efg_testing/expressions/smile/*.jpg")
+            anger_filenames = glob.glob(
+                data_folder + "efg_testing/expressions/anger/*.jpg")
+            scream_filenames = glob.glob(
+                data_folder + "efg_testing/expressions/scream/*.jpg")
 
         self.p_filenames = p_filenames + p_filenames + p_filenames
         self.e_filenames = smile_filenames + anger_filenames + scream_filenames
@@ -64,7 +73,6 @@ class EFGDataset(Dataset):
             label = i
             for _ in smile_filenames:
                 self.labels.append(label)
-
 
     def __len__(self):
         return len(self.p_filenames)
@@ -87,9 +95,7 @@ class EFGDataset(Dataset):
 class AugmentImage(object):
     def __call__(self, sample):
         sketch, photo = sample['source'], sample['target']
-        # toPIL = transforms.ToPILImage()
-        # sketch = toPIL(sketch)
-        # photo = toPIL(photo)
+
         # # ramdom rotate between [-15, 15]
         # angle = 30 * np.random.random_sample() - 15
         # sketch = sketch.rotate(angle)
@@ -98,14 +104,14 @@ class AugmentImage(object):
         # random flip
         hflip = np.random.random() < 0.5
         if hflip:
-          sketch = sketch.transpose(Image.FLIP_LEFT_RIGHT)
-          photo = photo.transpose(Image.FLIP_LEFT_RIGHT)
-
+            sketch = sketch.transpose(Image.FLIP_LEFT_RIGHT)
+            photo = photo.transpose(Image.FLIP_LEFT_RIGHT)
 
         # random resize between [44, 84]
-        output_size = np.random.randint(44, 85)
+        output_size = np.random.randint(
+            int(0.8 * image_size), int(1.2 * image_size))
         resize = transforms.Scale(output_size)  # for pytorch lower version!!!
-        crop = transforms.CenterCrop(64)
+        crop = transforms.CenterCrop(image_size)
         sketch = crop(resize(sketch))
         photo = crop(resize(photo))
         return {'source': sketch, 'target': photo}
@@ -132,26 +138,25 @@ class Normalize(object):
 
 if __name__ == "__main__":
     # test dataloader
-    transformed_dataset = NFGDataset(mode='training',
-                                    transform=transforms.Compose([ AugmentImage(),
-                                                                    ToTensor(),
-                                                                    Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])]))
+    transformed_dataset = EFGDataset(mode='training',
+                                     transform=transforms.Compose([AugmentImage(), ToTensor(), Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])]))
 
-    dataloader = DataLoader(transformed_dataset, batch_size=4, shuffle=True, num_workers=4)
+    dataloader = DataLoader(transformed_dataset,
+                            batch_size=4, shuffle=True, num_workers=4)
 
     # Helper function to show a batch
     def show_batch(images, labels=None, classes=None):
         """Show image with landmarks for a batch of samples."""
         sources, targets = images['source'], images['target']
-
+        print(sources[0].size())
         grid = utils.make_grid(sources)
         plt.subplot(211)
-        plt.imshow((grid.numpy()*0.5+0.5).transpose((1, 2, 0)))
+        plt.imshow((grid.numpy() * 0.5 + 0.5).transpose((1, 2, 0)))
         plt.axis('off')
 
         grid = utils.make_grid(targets)
         plt.subplot(212)
-        plt.imshow((grid.numpy()*0.5+0.5).transpose((1, 2, 0)))
+        plt.imshow((grid.numpy() * 0.5 + 0.5).transpose((1, 2, 0)))
         plt.axis('off')
 
         title = ''
@@ -164,15 +169,15 @@ if __name__ == "__main__":
     if hasattr(transformed_dataset, 'classes'):
         classes = transformed_dataset.classes
 
-    for epoch in range(10):
+    for epoch in range(2):
         for i_batch, sample_batched in enumerate(dataloader, 0):
-            # images, labels = sample_batched
-            images = sample_batched  # NO labels for NFGDataset
+            images, labels = sample_batched
+            # images = sample_batched  # NO labels for NFGDataset
 
             # show 4th batch and stop.
             if i_batch == 3:
                 plt.figure()
-                # show_batch(images, labels, classes)
-                show_batch(images)
+                show_batch(images, labels, classes)
+                # show_batch(images)
                 plt.show()
                 break
