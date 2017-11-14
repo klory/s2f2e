@@ -16,11 +16,11 @@ class NFGDataset(Dataset):
     def __init__(self, mode, transform=None):
         assert mode == 'training' or mode == 'testing'
         import glob
-        self.s_filenames = glob.glob("data/nfg_training/sketches/*.jpg")
-        self.p_filenames = glob.glob("data/nfg_training/photos/*.jpg")
+        self.s_filenames = glob.glob("data/64/nfg_training/sketches/*.jpg")
+        self.p_filenames = glob.glob("data/64/nfg_training/photos/*.jpg")
         if mode == 'testing':  # training
-            self.s_filenames = glob.glob("data/nfg_testing/sketches/*.jpg")
-            self.p_filenames = glob.glob("data/nfg_testing/photos/*.jpg")
+            self.s_filenames = glob.glob("data/64/nfg_testing/sketches/*.jpg")
+            self.p_filenames = glob.glob("data/64/nfg_testing/photos/*.jpg")
 
         assert len(self.s_filenames) == len(self.p_filenames)
         self.transform = transform
@@ -43,15 +43,15 @@ class EFGDataset(Dataset):
     def __init__(self, mode, transform=None):
         assert mode == 'training' or mode == 'testing'
         import glob
-        p_filenames = glob.glob("data/efg_training/photos/*.jpg")
-        smile_filenames = glob.glob("data/efg_training/expressions/smile/*.jpg")
-        anger_filenames = glob.glob("data/efg_training/expressions/anger/*.jpg")
-        scream_filenames = glob.glob("data/efg_training/expressions/scream/*.jpg")
+        p_filenames = glob.glob("data/64/efg_training/photos/*.jpg")
+        smile_filenames = glob.glob("data/64/efg_training/expressions/smile/*.jpg")
+        anger_filenames = glob.glob("data/64/efg_training/expressions/anger/*.jpg")
+        scream_filenames = glob.glob("data/64/efg_training/expressions/scream/*.jpg")
         if mode == 'testing':  # training
-            p_filenames = glob.glob("data/efg_testing/photos/*.jpg")
-            smile_filenames = glob.glob("data/efg_testing/expressions/smile/*.jpg")
-            anger_filenames = glob.glob("data/efg_testing/expressions/anger/*.jpg")
-            scream_filenames = glob.glob("data/efg_testing/expressions/scream/*.jpg")
+            p_filenames = glob.glob("data/64/efg_testing/photos/*.jpg")
+            smile_filenames = glob.glob("data/64/efg_testing/expressions/smile/*.jpg")
+            anger_filenames = glob.glob("data/64/efg_testing/expressions/anger/*.jpg")
+            scream_filenames = glob.glob("data/64/efg_testing/expressions/scream/*.jpg")
 
         self.p_filenames = p_filenames + p_filenames + p_filenames
         self.e_filenames = smile_filenames + anger_filenames + scream_filenames
@@ -130,48 +130,49 @@ class Normalize(object):
         return {'source': norm(sketch), 'target': norm(photo)}
 
 
-# test dataloader
-transformed_dataset = NFGDataset(mode='training',
-                                transform=transforms.Compose([ AugmentImage(),
-                                                                ToTensor(),
-                                                                Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])]))
+if __name__ == "__main__":
+    # test dataloader
+    transformed_dataset = NFGDataset(mode='training',
+                                    transform=transforms.Compose([ AugmentImage(),
+                                                                    ToTensor(),
+                                                                    Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])]))
 
-dataloader = DataLoader(transformed_dataset, batch_size=4, shuffle=True, num_workers=4)
+    dataloader = DataLoader(transformed_dataset, batch_size=4, shuffle=True, num_workers=4)
 
-# Helper function to show a batch
-def show_batch(images, labels=None, classes=None):
-    """Show image with landmarks for a batch of samples."""
-    sources, targets = images['source'], images['target']
+    # Helper function to show a batch
+    def show_batch(images, labels=None, classes=None):
+        """Show image with landmarks for a batch of samples."""
+        sources, targets = images['source'], images['target']
 
-    grid = utils.make_grid(sources)
-    plt.subplot(211)
-    plt.imshow(grid.numpy().transpose((1, 2, 0)))
-    plt.axis('off')
+        grid = utils.make_grid(sources)
+        plt.subplot(211)
+        plt.imshow((grid.numpy()*0.5+0.5).transpose((1, 2, 0)))
+        plt.axis('off')
 
-    grid = utils.make_grid(targets)
-    plt.subplot(212)
-    plt.imshow(grid.numpy().transpose((1, 2, 0)))
-    plt.axis('off')
+        grid = utils.make_grid(targets)
+        plt.subplot(212)
+        plt.imshow((grid.numpy()*0.5+0.5).transpose((1, 2, 0)))
+        plt.axis('off')
 
-    title = ''
-    if labels is not None:
-        for label in labels:
-            title += classes[label]
-            title += ', '
-    plt.title(title)
+        title = ''
+        if labels is not None:
+            for label in labels:
+                title += classes[label]
+                title += ', '
+        plt.title(title)
 
-if hasattr(transformed_dataset, 'classes'):
-    classes = transformed_dataset.classes
+    if hasattr(transformed_dataset, 'classes'):
+        classes = transformed_dataset.classes
 
-for epoch in range(10):
-    for i_batch, sample_batched in enumerate(dataloader, 0):
-        # images, labels = sample_batched
-        images = sample_batched  # NO labels for NFGDataset
+    for epoch in range(10):
+        for i_batch, sample_batched in enumerate(dataloader, 0):
+            # images, labels = sample_batched
+            images = sample_batched  # NO labels for NFGDataset
 
-        # show 4th batch and stop.
-        if i_batch == 3:
-            plt.figure()
-            # show_batch(images, labels, classes)
-            show_batch(images)
-            plt.show()
-            break
+            # show 4th batch and stop.
+            if i_batch == 3:
+                plt.figure()
+                # show_batch(images, labels, classes)
+                show_batch(images)
+                plt.show()
+                break
