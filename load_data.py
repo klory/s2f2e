@@ -17,13 +17,13 @@ class NFGDataset(Dataset):
         assert mode == 'training' or mode == 'testing'
         import glob
         self.s_filenames = glob.glob(
-            data_folder + "nfg_training/sketches/*.jpg")
-        self.p_filenames = glob.glob(data_folder + "nfg_training/photos/*.jpg")
+            data_folder + "nfg_training/sources/*.jpg")
+        self.p_filenames = glob.glob(data_folder + "nfg_training/targets/*.jpg")
         if mode == 'testing':  # training
             self.s_filenames = glob.glob(
-                data_folder + "nfg_testing/sketches/*.jpg")
+                data_folder + "nfg_testing/sources/*.jpg")
             self.p_filenames = glob.glob(
-                data_folder + "nfg_testing/photos/*.jpg")
+                data_folder + "nfg_testing/targets/*.jpg")
 
         assert len(self.s_filenames) == len(self.p_filenames)
         self.transform = transform
@@ -43,28 +43,25 @@ class NFGDataset(Dataset):
 
 
 class EFGDataset(Dataset):
-    def __init__(self, mode, transform=None):
+    def __init__(self, mode="training", end_to_end=False, transform=None):
         assert mode == 'training' or mode == 'testing'
-        import glob
-        p_filenames = glob.glob(data_folder + "efg_training/photos/*.jpg")
-        smile_filenames = glob.glob(
-            data_folder + "efg_training/expressions/smile/*.jpg")
-        anger_filenames = glob.glob(
-            data_folder + "efg_training/expressions/anger/*.jpg")
-        scream_filenames = glob.glob(
-            data_folder + "efg_training/expressions/scream/*.jpg")
-        if mode == 'testing':  # training
-            p_filenames = glob.glob(data_folder + "efg_testing/photos/*.jpg")
-            smile_filenames = glob.glob(
-                data_folder + "efg_testing/expressions/smile/*.jpg")
-            anger_filenames = glob.glob(
-                data_folder + "efg_testing/expressions/anger/*.jpg")
-            scream_filenames = glob.glob(
-                data_folder + "efg_testing/expressions/scream/*.jpg")
+        network = "efg"
+        if end_to_end is True:
+            network = "end2end"
+        current_data_folder = data_folder + network + "_" + mode
 
-        self.p_filenames = p_filenames + p_filenames + p_filenames
+        import glob
+        s_filenames = glob.glob(current_data_folder + "/sources/*.jpg")
+        smile_filenames = glob.glob(
+            current_data_folder + "/targets/smile/*.jpg")
+        anger_filenames = glob.glob(
+            current_data_folder + "/targets/anger/*.jpg")
+        scream_filenames = glob.glob(
+            current_data_folder + "/targets/scream/*.jpg")
+
+        self.s_filenames = s_filenames + s_filenames + s_filenames
         self.e_filenames = smile_filenames + anger_filenames + scream_filenames
-        assert len(self.p_filenames) == len(self.e_filenames)
+        assert len(self.s_filenames) == len(self.e_filenames)
         self.transform = transform
         self.classes = ('smile', 'anger', 'scream')
         # generate labels
@@ -75,12 +72,12 @@ class EFGDataset(Dataset):
                 self.labels.append(label)
 
     def __len__(self):
-        return len(self.p_filenames)
+        return len(self.s_filenames)
 
     def __getitem__(self, idx):
-        p_filename = self.p_filenames[idx]
+        s_filename = self.s_filenames[idx]
         e_filename = self.e_filenames[idx]
-        photo = Image.open(p_filename).convert('RGB')
+        photo = Image.open(s_filename).convert('RGB')
         expression = Image.open(e_filename).convert('RGB')
         sample = {'source': photo, 'target': expression}
 
@@ -138,7 +135,7 @@ class Normalize(object):
 
 if __name__ == "__main__":
     # test dataloader
-    transformed_dataset = EFGDataset(mode='testing',
+    transformed_dataset = EFGDataset(mode='testing', end_to_end=True,
                                      transform=transforms.Compose([AugmentImage(), ToTensor(), Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])]))
 
     dataloader = DataLoader(transformed_dataset,
