@@ -13,16 +13,16 @@ Decoder: upsampling
 Discriminator is the same as discriminator in network_NFG.py
 """
 class Encoder(nn.Module):
-    def __init__(self, input_nc, ngf=64, num_downs=7, norm_layer=nn.BatchNorm2d):
+    def __init__(self, input_nc, nfg=64, num_downs=7, norm_layer=nn.BatchNorm2d):
         super(Encoder, self).__init__()
         model = []
-        model += [ConvBlock(input_nc, ngf, norm_layer=norm_layer, first_layer=True)]
-        model += [ConvBlock(ngf, ngf*2, norm_layer=norm_layer)]
-        model += [ConvBlock(ngf*2, ngf*4, norm_layer=norm_layer)]
-        model += [ConvBlock(ngf*4, ngf*8, norm_layer=norm_layer)]
+        model += [ConvBlock(input_nc, nfg, norm_layer=norm_layer, first_layer=True)]
+        model += [ConvBlock(nfg, nfg*2, norm_layer=norm_layer)]
+        model += [ConvBlock(nfg*2, nfg*4, norm_layer=norm_layer)]
+        model += [ConvBlock(nfg*4, nfg*8, norm_layer=norm_layer)]
         for i in range(num_downs-5):
-            model += [ConvBlock(ngf*8, ngf*8, norm_layer=norm_layer)]
-        model += [ConvBlock(ngf*8, ngf*8, norm_layer=norm_layer, last_layer=True)]
+            model += [ConvBlock(nfg*8, nfg*8, norm_layer=norm_layer)]
+        model += [ConvBlock(nfg*8, nfg*8, norm_layer=norm_layer, last_layer=True)]
         self.model = nn.Sequential(*model)
     def forward(self, x):
         return self.model(x)
@@ -48,23 +48,23 @@ class ConvBlock(nn.Module):
 
 
 class Decoder(nn.Module):
-    def __init__(self, input_nc, ngf=128, num_downs=7, norm_layer=nn.BatchNorm2d, use_dropout=False):
+    def __init__(self, input_nc, nfg=128, num_downs=7, norm_layer=nn.BatchNorm2d, use_dropout=False):
         super(Decoder, self).__init__()
         model = []
-        self.ngf = ngf
-        self.linear = nn.Linear(ngf*8+3, ngf*8)
-        model += [ConvTransBlock(ngf*8, ngf*8, norm_layer=norm_layer)]
+        self.nfg = nfg
+        self.linear = nn.Linear(nfg*8+3, nfg*8)
+        model += [ConvTransBlock(nfg*8, nfg*8, norm_layer=norm_layer)]
         for i in range(num_downs-5):
-            model += [ConvTransBlock(ngf*8, ngf*8, norm_layer=norm_layer)]
-        model += [ConvTransBlock(ngf*8, ngf*4, norm_layer=norm_layer)]
-        model += [ConvTransBlock(ngf*4, ngf*2, norm_layer=norm_layer)]
-        model += [ConvTransBlock(ngf*2, ngf, norm_layer=norm_layer)]
-        model += [ConvTransBlock(ngf, input_nc, norm_layer=norm_layer, last_layer=True)]
+            model += [ConvTransBlock(nfg*8, nfg*8, norm_layer=norm_layer)]
+        model += [ConvTransBlock(nfg*8, nfg*4, norm_layer=norm_layer)]
+        model += [ConvTransBlock(nfg*4, nfg*2, norm_layer=norm_layer)]
+        model += [ConvTransBlock(nfg*2, nfg, norm_layer=norm_layer)]
+        model += [ConvTransBlock(nfg, input_nc, norm_layer=norm_layer, last_layer=True)]
         self.model = nn.Sequential(*model)
     def forward(self, x):
         batch_size = x.size()[0]
         x = self.linear(x)
-        x = x.view(batch_size, self.ngf*8, 1, 1)
+        x = x.view(batch_size, self.nfg*8, 1, 1)
         x = self.model(x)
         return x
 

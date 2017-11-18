@@ -15,45 +15,57 @@ class ModelNFG():
         self.model = opt.model
         self.input_nc = opt.input_nc
         self.output_nc = opt.output_nc
-        self.ngf = opt.ngf
-        if ngf == 128:
+        self.nfg = opt.nfg
+        if self.nfg == 128:
             self.num_downs = 7
-        elif ngf == 64:
-            self.num_downs = 7
+        elif self.nfg == 64:
+            self.num_downs = 6
         else:
-            raise ValueError("Only support ngf = 128 or 64. Got %d" % ngf)
+            raise ValueError("Only support nfg = 128 or 64. Got %d" % self.nfg)
+        # configuration of NFG network
         self.no_dropout = opt.no_dropout
         self.use_sigmoid = opt.use_sigmoid
         self.batch_size = opt.batch_size
         self.norm = functools.partial(nn.BatchNorm2d, affine=True)
-        self.lr = self.learning_rate
+        self.lr = opt.learning_rate
         self.lam = opt.lam
         self.beta1 = opt.beta1
         self.beta2 = opt.beta2
+        self.optimizer = opt.optimizer
 
-        self.net_G = Unet_G(self.input_nc, self.output_nc, self.num_downs, self.ngf, norm_layer=self.norm, use_dropout=not self.no_dropout)
-        self.decoder_G = Decoder(self.input_nc, ngf=self.ngf, num_downs=self.num_downs, norm_layer=self.norm, use_dropout=not self.no_dropout)
+        # initialize NFG network
+        self.net_G = Unet_G(self.input_nc, self.output_nc, self.num_downs, self.nfg, norm_layer=self.norm, use_dropout=not self.no_dropout)
         self.net_D = NLayerDiscriminator(self.input_nc, norm_layer=self.norm, use_sigmoid=self.use_sigmoid)
+
+        # set up optimizer
+        if self.optimizer == "adam":
+            self.optimizer_G = torch.optim.Adam(self.net_G.parameters(), lr=self.lr, betas=(self.beta1, self.beta2))
+            self.optimizer_D = torch.optim.Adam(self.net_D.parameters(), lr=self.lr, betas=(self.beta1, self.beta2))
+        elif self.model == "RMSProp":
+            self.optimizer_G = torch.optim.RMSProp(self.net_G.parameters(), lr=self.lr)
+            self.optimizer_D = torch.optim.RMSProp(self.net_D.parameters(), lr=self.lr)
+        else:
+            raise ValueError("%s not supported." % self.optimizer)
+        # set up input dataset
         transformed_dataset = NFGDataset(mode='training',
                 transform=transforms.Compose([
                     AugmentImage(),
                     ToTensor(),
                     Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
                     ]))
-        self.data_loader = torch.utils.data.DataLoader(transformed_dataset, batch_size=batch_size, shuffle=False)
+        self.data_loader = torch.utils.data.DataLoader(transformed_dataset, batch_size=self.batch_size, shuffle=False)
         transformed_dataset_test = NFGDataset(mode='testing',
                 transform=transforms.Compose([
                     AugmentImage(),
                     ToTensor(),
                     Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
                     ]))
-        self.data_loader_test = torch.utils.data.DataLoader(transformed_dataset_test, batch_size=batch_size, shuffle=False)
+        self.data_loader_test = torch.utils.data.DataLoader(transformed_dataset_test, batch_size=self.batch_size, shuffle=False)
         # save generated images
         self.out_dir = opt.out_dir + '/expression/'
-        if not os.path.exists(out_dir):
-            os.makedirs(out_dir)
-# preprocess data
-                                     
+        if not os.path.exists(self.out_dir):
+            os.makedirs(self.out_dir)
+        print("initializing completed:\n model name: %s\n input_nc: %s\n optimier: %s\n use_sigmoid: %s\n" % (self.model, self.input_nc, self.optimizer, self.use_sigmoid))
 
     def save_img(self, epoch):
         num_test = 2
@@ -78,14 +90,6 @@ class ModelNFG():
         criterionL1 = nn.L1Loss()
         real_label = 1.0 # labels for real image, used in loss api
         fake_label = 0.0 # labels for fake image, used in loss api
-        if self.model == "NFG":
-            optimizer_G = torch.optim.Adam(self.net_G.parameters(), lr=self.lr, betas=(self.beta1, self.beta2))
-            optimizer_D = torch.optim.Adam(self.net_D.parameters(), lr=self.lr, betas=(self.beta1, self.beta2))
-        elif self.model == "NFG_WGAN":
-            optimizer_G = torch.optim.RMSProp(self.net_G.parameters(), lr=self.lr)
-            optimizer_D = torch.optim.RMSProp(self.net_D.parameters(), lr=self.lr)
-        else:
-            raise ValueError("%s model not supported." % self.model)
 
 
         epoch = 30
@@ -107,22 +111,22 @@ class ModelNFG():
                 loss_D_fake = criterion(fake_logits, fake_tensor)
                 loss_D = (loss_D_real + loss_D_fake) * 0.5
                 # backward of D
-                optimizer_D.zero_grad()
+                self.optimizer_D.zero_grad()
                 loss_D.backward(retain_graph=True)
-                optimizer_D.step()
+                self.optimizer_D.step()
 
                 # compute loss of G
                 loss_G_GAN = criterion(fake_logits, real_tensor)
-                loss_G_L1 = criterionL1(fake_B, input_B) * lam
+                loss_G_L1 = criterionL1(fake_B, input_B) * self.lam
                 loss_G = loss_G_GAN + loss_G_L1
                 # backward of G
                 if i%5 != 0:
                     if self.model == "NFG_WGAN":
                         continue
                     else:
-                        optimizer_G.zero_grad()
+                        self.optimizer_G.zero_grad()
                         loss_G.backward()
-                        optimizer_G.step()
+                        self.optimizer_G.step()
 
                 if self.model == "NFG_WGAN":
                     for p in self.net_D.parameters():
@@ -133,5 +137,5 @@ class ModelNFG():
             save_img(e)
 
     def __call__(self):
-        train()
+        self.train()
         print('testing complete')

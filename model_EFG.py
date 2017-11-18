@@ -10,30 +10,45 @@ import numpy as np
 from PIL import Image
 from load_data import *
 
-class ModelNFG(object):
+class ModelEFG(object):
     def __init__(self, opt):
         self.model = opt.model
         self.input_nc = opt.input_nc
         self.output_nc = opt.output_nc
-        self.ngf = opt.ngf
-        if ngf == 128:
+        self.nfg = opt.nfg
+        if self.nfg == 128:
             self.num_downs = 7
-        elif ngf == 64:
+        elif self.nfg == 64:
             self.num_downs = 7
         else:
-            raise ValueError("Only support ngf = 128 or 64. Got %d" % ngf)
+            raise ValueError("Only support nfg = 128 or 64. Got %d" % self.nfg)
+        # configuration of network
         self.no_dropout = opt.no_dropout
         self.use_sigmoid = opt.use_sigmoid
         self.batch_size = opt.batch_size
         self.norm = functools.partial(nn.BatchNorm2d, affine=True)
-        self.lr = self.learning_rate
+        self.lr = opt.learning_rate
         self.lam = opt.lam
         self.beta1 = opt.beta1
         self.beta2 = opt.beta2
+        self.optimizer = opt.optimizer
 
-        self.encoder_G = Encoder(self.input_nc, ngf=self.ngf, num_downs=self.num_downs, norm_layer=self.norm)
-        self.decoder_G = Decoder(self.input_nc, ngf=self.ngf, num_downs=self.num_downs, norm_layer=self.norm, use_dropout=self.no_dropout)
+        # intializer network
+        self.encoder_G = Encoder(self.input_nc, nfg=self.nfg, num_downs=self.num_downs, norm_layer=self.norm)
+        self.decoder_G = Decoder(self.input_nc, nfg=self.nfg, num_downs=self.num_downs, norm_layer=self.norm, use_dropout=self.no_dropout)
         self.net_D = NLayerDiscriminator(self.input_nc, norm_layer=self.norm, use_sigmoid=self.use_sigmoid)
+
+        # setup optimizer
+        if self.model == "EFG":
+            self.optimizer_G = torch.optim.Adam(list(self.encoder_G.parameters()) + list(self.decoder_G.parameters()), lr=self.lr, betas=(self.beta1, self.beta2))
+            self.optimizer_D = torch.optim.Adam(self.net_D.parameters(), lr=self.lr, betas=(self.beta1, self.beta2))
+        elif self.model == "EFG_WGAN" or self.model == "E2E":
+            self.optimizer_G = torch.optim.RMSprop(list(self.encoder_G.parameters()) + list(self.decoder_G.parameters()), lr=self.lr)
+            self.optimizer_D = torch.optim.RMSprop(self.net_D.parameters(), lr=self.lr)
+        else:
+            raise ValueError("%s model not supported." % self.model)
+        
+        # setup input dataset
         if self.model == "EFG":
             self.transformed_dataset = EFGDataset(mode='training',
                     transform=transforms.Compose([AugmentImage(),
@@ -55,12 +70,14 @@ class ModelNFG(object):
                         ToTensor(),
                         Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])]))
 
-        self.data_loader = torch.utils.data.DataLoader(transformed_dataset, batch_size=batch_size, shuffle=False)
-        self.data_loader_test = torch.utils.data.DataLoader(transformed_dataset_test, batch_size=batch_size, shuffle=False)
+        self.data_loader = torch.utils.data.DataLoader(self.transformed_dataset, batch_size=self.batch_size, shuffle=False)
+        self.data_loader_test = torch.utils.data.DataLoader(self.transformed_dataset_test, batch_size=self.batch_size, shuffle=False)
         # save generated images
         self.out_dir = opt.out_dir + '/expression/'
-        if not os.path.exists(out_dir):
-            os.makedirs(out_dir)
+        if not os.path.exists(self.out_dir):
+            os.makedirs(self.out_dir)
+
+        print("initializing completed:\n model name: %s\n input_nc: %s\n optimier: %s\n use_sigmoid: %s\n" % (self.model, self.input_nc, self.optimizer, self.use_sigmoid))
 
     def save_img(self, epoch):
         num_test = 2
@@ -111,14 +128,6 @@ class ModelNFG(object):
         criterionL1 = nn.L1Loss()
         real_label = 1.0
         fake_label = 0.0
-        if self.model == "EFG":
-            optimizer_G = torch.optim.Adam(list(self.encoder_G.parameters()) + list(self.decoder_G.parameters()), lr=lr, betas=(beta1, beta2))
-            optimizer_D = torch.optim.Adam(self.net_D.parameters(), lr=lr, betas=(beta1, beta2))
-        elif self.model == "EFG_WGAN" or self.model == "E2E":
-            optimizer_G = torch.optim.RMSProp(list(self.encoder_G.parameters()) + list(self.decoder_G.parameters()), lr=self.lr)
-            optimizer_D = torch.optim.RMSProp(self.net_D.parameters(), lr=self.lr)
-        else:
-            raise ValueError("%s model not supported." % self.model)
 
         epoch = 100
         for e in range(epoch):
@@ -135,16 +144,11 @@ class ModelNFG(object):
                 else:
                     v = Variable(torch.Tensor([[0,0,1]]))
 
-                # obtain the bottle-neck layer
                 fake_inter = self.encoder_G(input_A)
-                # reshape into 2d tensor
                 fake_inter = fake_inter.view(1, -1)
-                # one-hot expression code
                 fake_img = self.decoder_G(torch.cat((fake_inter, v), 1))
-                # forward of discriminator
-                D_real = self.net_D(input)
+                D_real = self.net_D(input_A)
                 D_fake = self.net_D(fake_img)
-                # labels for loss function
                 real_tensor = Variable(torch.Tensor(D_real.size()).fill_(real_label), requires_grad=False)
                 fake_tensor = Variable(torch.Tensor(D_fake.size()).fill_(fake_label), requires_grad=False)
                 # loss of D
@@ -152,30 +156,28 @@ class ModelNFG(object):
                 loss_D_fake = criterion(D_fake, fake_tensor)
                 loss_D = (loss_D + loss_D_fake) * 0.5
                 # backward of D
-                optimizer_D.zero_grad()
+                self.optimizer_D.zero_grad()
                 loss_D.backward(retain_graph=True)
-                optimizer_D.step()
-                # loss GAN_G
+                self.optimizer_D.step()
+                # loss of G
                 loss_G_GAN= criterion(D_fake, real_tensor)
-                # L1 loss of G
                 loss_G_L1 = criterionL1(fake_img, input_Tgt)
-                loss_G = loss_G_GAN + loss_G_L1 * lam
+                loss_G = loss_G_GAN + loss_G_L1 * self.lam
                 # backward of G
                 if i%5 != 0:
-                    if self.model == "WGAN" or self.model == "E2E":
+                    if self.model == "EFG_WGAN" or self.model == "E2E":
                         continue
                     else:
-                        optimizer_G.zero_grad()
+                        self.optimizer_G.zero_grad()
                         loss_G.backward()
-                        optimizer_G.step()
+                        self.optimizer_G.step()
                 if self.model == "EFG_WGAN" or self.model == "E2E":
-                    p = self.net_D.parameters().clamp_(-0.01, 0.01)
-
-
-            print('epoch: %d, it: %d, loss_G: %f, loss_D: %f' % (e, i, loss_G.data[0], loss_D.data[0]))
+                    for p in self.net_D.parameters():
+                        p.data.clamp_(-0.01, 0.01)
+                print('epoch: %d, it: %d, loss_G: %f, loss_D: %f' % (e, i, loss_G.data[0], loss_D.data[0]))
             if e%5 == 0:
                 self.save_img(e)
 
-    def __call__(self, opt):
-        train()
+    def __call__(self):
+        self.train()
         print('training complete')
