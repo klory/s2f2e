@@ -110,7 +110,7 @@ class ModelEFG(object):
 
             # expression_label, 0: smile, 1: anger, 2: scream
             fake = self.decoder_G(torch.cat((fake_inter, v), 1))
-            fake_numpy = fake[0].data.numpy()
+            fake_numpy = fake[0].cpu().data.numpy()
             img_fake = ((np.transpose(fake_numpy, (1, 2, 0)) + 1) / 2.0 * 255.0).astype(np.uint8)
             if expression_label == 0: 
                 Image.fromarray(img_fake).save(self.out_dir + str(epoch) + '_' + str(i) + 'fake_smile' + '.jpg')
@@ -119,7 +119,7 @@ class ModelEFG(object):
             else:
                 Image.fromarray(img_fake).save(self.out_dir + str(epoch) + '_' + str(i) + 'fake_scream' + '.jpg')
 
-            img_A = ((np.transpose(test_A[0].data.numpy(), (1, 2, 0)) + 1) / 2.0 * 255.0).astype(np.uint8)
+            img_A = ((np.transpose(test_A[0].cpu().data.numpy(), (1, 2, 0)) + 1) / 2.0 * 255.0).astype(np.uint8)
             Image.fromarray(img_A).save(self.out_dir + str(epoch) + '_' + str(i) + 'A' + '.jpg')
 
     def train(self):
@@ -132,6 +132,8 @@ class ModelEFG(object):
         for e in range(epoch):
             print("training epoch: %d" % e)
             for i, data in enumerate(self.data_loader):
+                if i > 5:
+                    break
                 # set input of network
                 if torch.cuda.is_available():
                     input_A = Variable(data[0]['source'].cuda())

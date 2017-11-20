@@ -86,11 +86,11 @@ class ModelNFG():
                 test_B = data['target']
 
             fake_B = self.net_G(test_A)
-            fake_B_numpy = fake_B[0].data.numpy()
+            fake_B_numpy = fake_B[0].cpu().data.numpy()
             img_fake_B = ((np.transpose(fake_B_numpy, (1, 2, 0)) + 1) / 2.0 * 255.0).astype(np.uint8)
             Image.fromarray(img_fake_B).save(self.out_dir + str(epoch) + '_' + str(i) + 'fake_B' + '.jpg')
-            img_B = ((np.transpose(test_B[0].numpy(), (1, 2, 0)) + 1) / 2.0 * 255.0).astype(np.uint8)
-            img_A = ((np.transpose(test_A[0].data.numpy(), (1, 2, 0)) + 1) / 2.0 * 255.0).astype(np.uint8)
+            img_B = ((np.transpose(test_B[0].cpu().numpy(), (1, 2, 0)) + 1) / 2.0 * 255.0).astype(np.uint8)
+            img_A = ((np.transpose(test_A[0].cpu().data.numpy(), (1, 2, 0)) + 1) / 2.0 * 255.0).astype(np.uint8)
             Image.fromarray(img_B).save(self.out_dir + str(epoch) + '_' + str(i) + 'B' + '.jpg')
             Image.fromarray(img_A).save(self.out_dir + str(epoch) + '_' + str(i) + 'A' + '.jpg')
 
