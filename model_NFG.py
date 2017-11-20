@@ -74,10 +74,7 @@ class ModelNFG():
         print("initializing completed:\n model name: %s\n input_nc: %s\n use_sigmoid: %s\n" % (self.model, self.input_nc, self.use_sigmoid))
 
     def save_img(self, epoch):
-        num_test = 2
         for i, data in enumerate(self.data_loader_test):
-            if i > num_test:
-                break
             if torch.cuda.is_available():
                 test_A = Variable(data['source'].cuda())
                 test_B = data['target'].cuda()
@@ -144,6 +141,7 @@ class ModelNFG():
                         p.data.clamp_(-0.01, 0.01)
                 # compute loss of G
                 loss_G_L1 = criterionL1(fake_B, input_B) * self.lam
+                D_fake = self.net_D(fake_B)
                 if "WGAN" in self.model:
                     loss_G_GAN = -torch.mean(D_fake)
                 else:
@@ -155,7 +153,7 @@ class ModelNFG():
                         continue
                     else:
                         self.optimizer_G.zero_grad()
-                        loss_G.backward(retain_graph=True)
+                        loss_G.backward()
                         self.optimizer_G.step()
                 else:
                     self.optimizer_G.zero_grad()
@@ -164,7 +162,6 @@ class ModelNFG():
 
 
                 print('epoch: %d, it: %d, G_GAN: %f\t, G_L1: %f\t, D_real: %f\t, D_fake: %f\t' % (e, i, loss_G_GAN.data[0], loss_G_L1.data[0], loss_D_real.data[0], loss_D_fake.data[0]))
-        if e%5 == 0:
             save_img(e)
 
     def __call__(self):

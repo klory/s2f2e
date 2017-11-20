@@ -87,10 +87,7 @@ class ModelEFG(object):
         print("initializing completed:\n model name: %s\n input_nc: %s\n use_sigmoid: %s\n" % (self.model, self.input_nc, self.use_sigmoid))
 
     def save_img(self, epoch):
-        num_test = 2
         for i, data in enumerate(self.data_loader_test):
-            if i > num_test:
-                break
             # test_A: neutral face image
             if torch.cuda.is_available():
                 test_A = Variable(data[0]['source'].cuda())
@@ -132,8 +129,6 @@ class ModelEFG(object):
         for e in range(epoch):
             print("training epoch: %d" % e)
             for i, data in enumerate(self.data_loader):
-                if i > 5:
-                    break
                 # set input of network
                 if torch.cuda.is_available():
                     input_A = Variable(data[0]['source'].cuda())
@@ -186,6 +181,7 @@ class ModelEFG(object):
                         p.data.clamp_(-0.01, 0.01)
                 # loss of G
                 loss_G_L1 = criterionL1(fake_img, input_Tgt)
+                D_fake = self.net_D(fake_img)
                 if "WGAN" in self.model:
                     loss_G_GAN= -torch.mean(D_fake)
                 else:
@@ -206,8 +202,7 @@ class ModelEFG(object):
                     self.optimizer_G.step()
 
                 print('epoch: %d, it: %d, loss_G: %f, loss_D: %f' % (e, i, loss_G.data[0], loss_D.data[0]))
-            if e%5 == 0:
-                self.save_img(e)
+            self.save_img(e)
 
     def __call__(self):
         self.train()
