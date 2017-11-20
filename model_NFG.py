@@ -36,10 +36,10 @@ class ModelNFG():
         self.net_G = Unet_G(self.input_nc, self.output_nc, self.num_downs, self.nfg, norm_layer=self.norm, use_dropout=not self.no_dropout)
         self.net_D = NLayerDiscriminator(self.input_nc, norm_layer=self.norm, use_sigmoid=self.use_sigmoid)
         if torch.cuda.device_count() > 1:
-            print("Using %d GPUs." % torch.cuda.device_count())
             self.net_G = nn.DataParallel(self.net_G)
             self.net_D = nn.DataParallel(self.net_D)
         if torch.cuda.is_available():
+            print("Using %d GPUs." % torch.cuda.device_count())
             self.net_G.cuda()
             self.net_D.cuda()
 

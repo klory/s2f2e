@@ -36,12 +36,12 @@ class ModelEFG(object):
         self.encoder_G = Encoder(self.input_nc, nfg=self.nfg, num_downs=self.num_downs, norm_layer=self.norm)
         self.decoder_G = Decoder(self.input_nc, nfg=self.nfg, num_downs=self.num_downs, norm_layer=self.norm, use_dropout=self.no_dropout)
         self.net_D = NLayerDiscriminator(self.input_nc, norm_layer=self.norm, use_sigmoid=self.use_sigmoid)
-        if torch.cuda.device_count() >= 1:
-            print("Using %d GPUs." % torch.cuda.device_count())
+        if torch.cuda.device_count() > 1:
             self.encoder_G = nn.DataParallel(self.encoder_G)
             self.decoder_G = nn.DataParallel(self.decoder_G)
             self.net_D = nn.DataParallel(self.net_D)
         if torch.cuda.is_available():
+            print("Using %d GPUs." % torch.cuda.device_count())
             self.encoder_G.cuda()
             self.decoder_G.cuda()
             self.net_D.cuda()
@@ -60,8 +60,7 @@ class ModelEFG(object):
         if "E2E" not in self.model:
             self.transformed_dataset = EFGDataset(mode='training',
                     transform=transforms.Compose([AugmentImage(),
-                        ToTensor(),
-                        Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])]))
+                    ToTensor(), Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])]))
             self.transformed_dataset_test = EFGDataset(mode='testing',
                     transform=transforms.Compose([AugmentImage(),
                         ToTensor(),
