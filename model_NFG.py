@@ -24,24 +24,30 @@ class ModelNFG():
             raise ValueError("Only support nfg = 128 or 64. Got %d" % self.nfg)
         # configuration of NFG network
         self.no_dropout = opt.no_dropout
-        self.use_sigmoid = opt.use_sigmoid
+        self.use_sigmoid = False
         self.batch_size = opt.batch_size
         self.norm = functools.partial(nn.BatchNorm2d, affine=True)
         self.lr = opt.learning_rate
         self.lam = opt.lam
         self.beta1 = opt.beta1
         self.beta2 = opt.beta2
-        self.optimizer = opt.optimizer
 
         # initialize NFG network
         self.net_G = Unet_G(self.input_nc, self.output_nc, self.num_downs, self.nfg, norm_layer=self.norm, use_dropout=not self.no_dropout)
         self.net_D = NLayerDiscriminator(self.input_nc, norm_layer=self.norm, use_sigmoid=self.use_sigmoid)
+        if torch.cuda.device_count() > 1:
+            print("Using %d GPUs." % torch.cuda.device_count())
+            self.net_G = nn.DataParallel(self.net_G)
+            self.net_D = nn.DataParallel(self.net_D)
+        if torch.cuda.is_available():
+            self.net_G.cuda()
+            self.net_G.cuda()
 
         # set up optimizer
-        if self.optimizer == "adam":
+        if "LSGAN" in self.model:
             self.optimizer_G = torch.optim.Adam(self.net_G.parameters(), lr=self.lr, betas=(self.beta1, self.beta2))
             self.optimizer_D = torch.optim.Adam(self.net_D.parameters(), lr=self.lr, betas=(self.beta1, self.beta2))
-        elif self.model == "RMSProp":
+        elif "WGAN" in self.model:
             self.optimizer_G = torch.optim.RMSProp(self.net_G.parameters(), lr=self.lr)
             self.optimizer_D = torch.optim.RMSProp(self.net_D.parameters(), lr=self.lr)
         else:
@@ -72,8 +78,13 @@ class ModelNFG():
         for i, data in enumerate(self.data_loader_test):
             if i > num_test:
                 break
-            test_A = Variable(data['source'])
-            test_B = data['target']
+            if torch.cuda.is_available()
+                test_A = Variable(data['source'].cuda())
+                test_B = data['target'].cuda()
+            else:
+                test_A = Variable(data['source'])
+                test_B = data['target']
+
             fake_B = self.net_G(test_A)
             fake_B_numpy = fake_B[0].data.numpy()
             img_fake_B = ((np.transpose(fake_B_numpy, (1, 2, 0)) + 1) / 2.0 * 255.0).astype(np.uint8)
@@ -97,28 +108,44 @@ class ModelNFG():
             print("training epoch: %d" % e)
             for i, data in enumerate(self.data_loader):
                 print('iteration %d' % i)
-                input_A = Variable(data['source'])
-                input_B = Variable(data['target'])
+                if torch.cuda.is_available():
+                    input_A = Variable(data['source'].cuda())
+                    input_B = Variable(data['target'].cuda())
+                else:
+                    input_A = Variable(data['source'])
+                    input_B = Variable(data['target'])
                 # forward of G
                 fake_B = self.net_G(input_A)
                 #forward of D
                 real_logits = self.net_D(input_B)
                 fake_logits = self.net_D(fake_B)
-                real_tensor = Variable(torch.Tensor(real_logits.size()).fill_(real_label), requires_grad=False)
-                fake_tensor = Variable(torch.Tensor(fake_logits.size()).fill_(fake_label), requires_grad=False)
+                if torch.cuda.is_available():
+                    real_tensor = Variable(torch.Tensor(real_logits.size()).fill_(real_label).cuda(), requires_grad=False)
+                    fake_tensor = Variable(torch.Tensor(fake_logits.size()).fill_(fake_label).cuda(), requires_grad=False)
+                else:
+                    real_tensor = Variable(torch.Tensor(real_logits.size()).fill_(real_label), requires_grad=False)
+                    fake_tensor = Variable(torch.Tensor(fake_logits.size()).fill_(fake_label), requires_grad=False)
                 # compute loss of D
-                loss_D_real = criterion(real_logits, real_tensor)
-                loss_D_fake = criterion(fake_logits, fake_tensor)
-                loss_D = (loss_D_real + loss_D_fake) * 0.5
+                if "WGAN" in self.model:
+                    loss_D_real = torch.mean(D_real)
+                    loss_D_fake = torch.mean(D_fake)
+                    loss_D = -(loss_D_real - loss_D_fake)
+                else:
+                    loss_D_real = criterion(real_logits, real_tensor)
+                    loss_D_fake = criterion(fake_logits, fake_tensor)
+                    loss_D = (loss_D_real + loss_D_fake) * 0.5
                 # backward of D
                 self.optimizer_D.zero_grad()
                 loss_D.backward(retain_graph=True)
                 self.optimizer_D.step()
 
                 # compute loss of G
-                loss_G_GAN = criterion(fake_logits, real_tensor)
                 loss_G_L1 = criterionL1(fake_B, input_B) * self.lam
-                loss_G = loss_G_GAN + loss_G_L1
+                if "WGAN" in self.model:
+                    loss_G_GAN = -torch.mean(D_fake)
+                else:
+                    loss_G_GAN = criterion(fake_logits, real_tensor)
+                loss_G = loss_G_GAN + loss_G_L1 * self.lam
                 # backward of G
                 if i%5 != 0:
                     if self.model == "NFG_WGAN":

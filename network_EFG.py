@@ -90,7 +90,7 @@ class ConvTransBlock(nn.Module):
         return self.model(x)
 
 class NLayerDiscriminator(nn.Module):
-    def __init__(self, input_nc, ndf=128, n_layers=3, norm_layer=nn.BatchNorm2d, use_sigmoid=False):
+    def __init__(self, input_nc, ndf=128, n_layers=7, norm_layer=nn.BatchNorm2d, use_sigmoid=False):
         super(NLayerDiscriminator, self).__init__()
         if type(norm_layer) == functools.partial:
             use_bias = norm_layer.func == nn.InstanceNorm2d
