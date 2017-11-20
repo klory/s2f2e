@@ -36,7 +36,7 @@ class ModelEFG(object):
         self.encoder_G = Encoder(self.input_nc, nfg=self.nfg, num_downs=self.num_downs, norm_layer=self.norm)
         self.decoder_G = Decoder(self.input_nc, nfg=self.nfg, num_downs=self.num_downs, norm_layer=self.norm, use_dropout=self.no_dropout)
         self.net_D = NLayerDiscriminator(self.input_nc, norm_layer=self.norm, use_sigmoid=self.use_sigmoid)
-        if torch.cuda.device_count() > 1:
+        if torch.cuda.device_count() >= 1:
             print("Using %d GPUs." % torch.cuda.device_count())
             self.encoder_G = nn.DataParallel(self.encoder_G)
             self.decoder_G = nn.DataParallel(self.decoder_G)
@@ -85,7 +85,7 @@ class ModelEFG(object):
         if not os.path.exists(self.out_dir):
             os.makedirs(self.out_dir)
 
-        print("initializing completed:\n model name: %s\n input_nc: %s\n optimier: %s\n use_sigmoid: %s\n" % (self.model, self.input_nc, self.optimizer, self.use_sigmoid))
+        print("initializing completed:\n model name: %s\n input_nc: %s\n use_sigmoid: %s\n" % (self.model, self.input_nc, self.use_sigmoid))
 
     def save_img(self, epoch):
         num_test = 2
@@ -93,9 +93,9 @@ class ModelEFG(object):
             if i > num_test:
                 break
             # test_A: neutral face image
-            if torch.cuda.is_availabel()
+            if torch.cuda.is_available():
                 test_A = Variable(data[0]['source'].cuda())
-                expression_label = data[1][0].cuda()
+                expression_label = data[1][0]
                 test = Variable(data[0]['target'].cuda())
                 # one-hot expression code
                 v = Variable(torch.Tensor([[1,0,0]]).cuda())
@@ -137,7 +137,7 @@ class ModelEFG(object):
                 if torch.cuda.is_available():
                     input_A = Variable(data[0]['source'].cuda())
                     input_Tgt = Variable(data[0]['target'].cuda())
-                    expression_label = data[1][0].cuda()
+                    expression_label = data[1][0]
                     if expression_label == 0:
                         v = Variable(torch.Tensor([[1,0,0]]).cuda())
                     elif expression_label == 1:
@@ -173,18 +173,18 @@ class ModelEFG(object):
                     loss_D = -(loss_D_real - loss_D_fake)
                 else:
                     loss_D_real = criterion(D_real, real_tensor)
-                    loss_D_fake = torch.mean(D_fake, real_tensor)
+                    loss_D_fake = criterion(D_fake, real_tensor)
                     loss_D = (loss_D_real + loss_D_fake) * 0.5
                 # backward of D
                 self.optimizer_D.zero_grad()
-                loss_D.backward(retain_graph=True)
+                loss_D.backward()
                 self.optimizer_D.step()
                 # loss of G
                 loss_G_L1 = criterionL1(fake_img, input_Tgt)
                 if "WGAN" in self.model:
                     loss_G_GAN= -torch.mean(D_fake)
                 else:
-                    loss_G_GAN= criterion(fake_img, real_tensor)
+                    loss_G_GAN= criterion(D_fake, real_tensor)
                 loss_G = loss_G_GAN + loss_G_L1 * self.lam
 
                 # backward of G

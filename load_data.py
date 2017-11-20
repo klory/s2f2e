@@ -1,5 +1,5 @@
 import numpy as np
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms, utils
 from PIL import Image
@@ -141,9 +141,10 @@ if __name__ == "__main__":
     dataloader = DataLoader(transformed_dataset,
                             batch_size=4, shuffle=True, num_workers=4)
 
+"""
     # Helper function to show a batch
     def show_batch(images, labels=None, classes=None):
-        """Show image with landmarks for a batch of samples."""
+        #Show image with landmarks for a batch of samples.
         sources, targets = images['source'], images['target']
         print(sources[0].size())
         grid = utils.make_grid(sources)
@@ -178,3 +179,4 @@ if __name__ == "__main__":
                 # show_batch(images)
                 plt.show()
                 break
+"""

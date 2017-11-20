@@ -15,7 +15,7 @@ class Option(object):
         parser.add_argument("--no_dropout", type="bool", nargs="?", const=True, default=False, help="whether to use dropout.")
         parser.add_argument("--batch_size", type=int, default=1, help="batch size")
         parser.add_argument("--out_dir", type=str, default="./out/image/", help="location to store output images.")
-        parser.add_argument("--model", type=str, default="E2E_WGAN", help="which model to implement: EFG_WGAN, EGF_LSGAN, NFG_WGAN, NFG_LSGAN, E2E_WGAN, E2E_LSGAN")
+        parser.add_argument("--model", type=str, default="E2E_LSGAN", help="which model to implement: EFG_WGAN, EGF_LSGAN, NFG_WGAN, NFG_LSGAN, E2E_WGAN, E2E_LSGAN")
         parser.add_argument("--lam", type=int, default=10, help="lambda to balance loss_g_gan and loss_g_l1.")
         parser.add_argument("--beta1", type=float, default=0.5, help="beta1 for adam")
         parser.add_argument("--beta2", type=float, default=0.999, help="beta2 for adam")

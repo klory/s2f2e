@@ -41,15 +41,15 @@ class ModelNFG():
             self.net_D = nn.DataParallel(self.net_D)
         if torch.cuda.is_available():
             self.net_G.cuda()
-            self.net_G.cuda()
+            self.net_D.cuda()
 
         # set up optimizer
         if "LSGAN" in self.model:
             self.optimizer_G = torch.optim.Adam(self.net_G.parameters(), lr=self.lr, betas=(self.beta1, self.beta2))
             self.optimizer_D = torch.optim.Adam(self.net_D.parameters(), lr=self.lr, betas=(self.beta1, self.beta2))
         elif "WGAN" in self.model:
-            self.optimizer_G = torch.optim.RMSProp(self.net_G.parameters(), lr=self.lr)
-            self.optimizer_D = torch.optim.RMSProp(self.net_D.parameters(), lr=self.lr)
+            self.optimizer_G = torch.optim.RMSprop(self.net_G.parameters(), lr=self.lr)
+            self.optimizer_D = torch.optim.RMSprop(self.net_D.parameters(), lr=self.lr)
         else:
             raise ValueError("%s not supported." % self.optimizer)
         # set up input dataset
@@ -71,14 +71,14 @@ class ModelNFG():
         self.out_dir = opt.out_dir + '/expression/'
         if not os.path.exists(self.out_dir):
             os.makedirs(self.out_dir)
-        print("initializing completed:\n model name: %s\n input_nc: %s\n optimier: %s\n use_sigmoid: %s\n" % (self.model, self.input_nc, self.optimizer, self.use_sigmoid))
+        print("initializing completed:\n model name: %s\n input_nc: %s\n use_sigmoid: %s\n" % (self.model, self.input_nc, self.use_sigmoid))
 
     def save_img(self, epoch):
         num_test = 2
         for i, data in enumerate(self.data_loader_test):
             if i > num_test:
                 break
-            if torch.cuda.is_available()
+            if torch.cuda.is_available():
                 test_A = Variable(data['source'].cuda())
                 test_B = data['target'].cuda()
             else:
@@ -117,26 +117,26 @@ class ModelNFG():
                 # forward of G
                 fake_B = self.net_G(input_A)
                 #forward of D
-                real_logits = self.net_D(input_B)
-                fake_logits = self.net_D(fake_B)
+                D_real = self.net_D(input_B)
+                D_fake = self.net_D(fake_B)
                 if torch.cuda.is_available():
-                    real_tensor = Variable(torch.Tensor(real_logits.size()).fill_(real_label).cuda(), requires_grad=False)
-                    fake_tensor = Variable(torch.Tensor(fake_logits.size()).fill_(fake_label).cuda(), requires_grad=False)
+                    real_tensor = Variable(torch.Tensor(D_real.size()).fill_(real_label).cuda(), requires_grad=False)
+                    fake_tensor = Variable(torch.Tensor(D_fake.size()).fill_(fake_label).cuda(), requires_grad=False)
                 else:
-                    real_tensor = Variable(torch.Tensor(real_logits.size()).fill_(real_label), requires_grad=False)
-                    fake_tensor = Variable(torch.Tensor(fake_logits.size()).fill_(fake_label), requires_grad=False)
+                    real_tensor = Variable(torch.Tensor(D_real.size()).fill_(real_label), requires_grad=False)
+                    fake_tensor = Variable(torch.Tensor(D_fake.size()).fill_(fake_label), requires_grad=False)
                 # compute loss of D
                 if "WGAN" in self.model:
                     loss_D_real = torch.mean(D_real)
                     loss_D_fake = torch.mean(D_fake)
                     loss_D = -(loss_D_real - loss_D_fake)
                 else:
-                    loss_D_real = criterion(real_logits, real_tensor)
-                    loss_D_fake = criterion(fake_logits, fake_tensor)
+                    loss_D_real = criterion(D_real, real_tensor)
+                    loss_D_fake = criterion(D_fake, fake_tensor)
                     loss_D = (loss_D_real + loss_D_fake) * 0.5
                 # backward of D
                 self.optimizer_D.zero_grad()
-                loss_D.backward(retain_graph=True)
+                loss_D.backward()
                 self.optimizer_D.step()
 
                 # compute loss of G
@@ -144,7 +144,7 @@ class ModelNFG():
                 if "WGAN" in self.model:
                     loss_G_GAN = -torch.mean(D_fake)
                 else:
-                    loss_G_GAN = criterion(fake_logits, real_tensor)
+                    loss_G_GAN = criterion(D_fake, real_tensor)
                 loss_G = loss_G_GAN + loss_G_L1 * self.lam
                 # backward of G
                 if i%5 != 0:
