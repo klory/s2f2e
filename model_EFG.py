@@ -88,6 +88,8 @@ class ModelEFG(object):
 
     def save_img(self, epoch):
         for i, data in enumerate(self.data_loader_test):
+            if i > 20:
+                break
             # test_A: neutral face image
             if torch.cuda.is_available():
                 test_A = Variable(data[0]['source'].cuda())
@@ -125,7 +127,7 @@ class ModelEFG(object):
         real_label = 1.0
         fake_label = 0.0
 
-        epoch = 100
+        epoch = 200
         for e in range(epoch):
             print("training epoch: %d" % e)
             for i, data in enumerate(self.data_loader):
