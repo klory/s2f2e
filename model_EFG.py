@@ -80,7 +80,7 @@ class ModelEFG(object):
         self.data_loader = torch.utils.data.DataLoader(self.transformed_dataset, batch_size=self.batch_size, shuffle=False)
         self.data_loader_test = torch.utils.data.DataLoader(self.transformed_dataset_test, batch_size=self.batch_size, shuffle=False)
         # save generated images
-        self.out_dir = opt.out_dir + '/expression/'
+        self.out_dir = opt.out_dir + self.model + '/expression/'
         if not os.path.exists(self.out_dir):
             os.makedirs(self.out_dir)
 
@@ -176,8 +176,12 @@ class ModelEFG(object):
                     loss_D = (loss_D_real + loss_D_fake) * 0.5
                 # backward of D
                 self.optimizer_D.zero_grad()
-                loss_D.backward()
+                loss_D.backward(retain_graph=True)
                 self.optimizer_D.step()
+
+                if "WGAN" in self.model:
+                    for p in self.net_D.parameters():
+                        p.data.clamp_(-0.01, 0.01)
                 # loss of G
                 loss_G_L1 = criterionL1(fake_img, input_Tgt)
                 if "WGAN" in self.model:
@@ -194,9 +198,11 @@ class ModelEFG(object):
                         self.optimizer_G.zero_grad()
                         loss_G.backward()
                         self.optimizer_G.step()
-                if "WGAN" in self.model:
-                    for p in self.net_D.parameters():
-                        p.data.clamp_(-0.01, 0.01)
+                else:
+                    self.optimizer_G.zero_grad()
+                    loss_G.backward()
+                    self.optimizer_G.step()
+
                 print('epoch: %d, it: %d, loss_G: %f, loss_D: %f' % (e, i, loss_G.data[0], loss_D.data[0]))
             if e%5 == 0:
                 self.save_img(e)

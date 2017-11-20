@@ -68,7 +68,7 @@ class ModelNFG():
                     ]))
         self.data_loader_test = torch.utils.data.DataLoader(transformed_dataset_test, batch_size=self.batch_size, shuffle=False)
         # save generated images
-        self.out_dir = opt.out_dir + '/expression/'
+        self.out_dir = opt.out_dir + self.model + '/expression/'
         if not os.path.exists(self.out_dir):
             os.makedirs(self.out_dir)
         print("initializing completed:\n model name: %s\n input_nc: %s\n use_sigmoid: %s\n" % (self.model, self.input_nc, self.use_sigmoid))
@@ -136,9 +136,12 @@ class ModelNFG():
                     loss_D = (loss_D_real + loss_D_fake) * 0.5
                 # backward of D
                 self.optimizer_D.zero_grad()
-                loss_D.backward()
+                loss_D.backward(retain_graph=True)
                 self.optimizer_D.step()
 
+                if self.model == "NFG_WGAN":
+                    for p in self.net_D.parameters():
+                        p.data.clamp_(-0.01, 0.01)
                 # compute loss of G
                 loss_G_L1 = criterionL1(fake_B, input_B) * self.lam
                 if "WGAN" in self.model:
@@ -152,12 +155,13 @@ class ModelNFG():
                         continue
                     else:
                         self.optimizer_G.zero_grad()
-                        loss_G.backward()
+                        loss_G.backward(retain_graph=True)
                         self.optimizer_G.step()
+                else:
+                    self.optimizer_G.zero_grad()
+                    loss_G.backward()
+                    self.optimizer_G.step()
 
-                if self.model == "NFG_WGAN":
-                    for p in self.net_D.parameters():
-                        p.data.clamp_(-0.01, 0.01)
 
                 print('epoch: %d, it: %d, G_GAN: %f\t, G_L1: %f\t, D_real: %f\t, D_fake: %f\t' % (e, i, loss_G_GAN.data[0], loss_G_L1.data[0], loss_D_real.data[0], loss_D_fake.data[0]))
         if e%5 == 0:
