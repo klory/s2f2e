@@ -3,6 +3,7 @@ import numpy as np
 from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms, utils
 from PIL import Image
+from random import shuffle
 
 # Ignore warnings
 import warnings
@@ -43,7 +44,7 @@ class NFGDataset(Dataset):
 
 
 class EFGDataset(Dataset):
-    def __init__(self, mode="training", end_to_end=False, transform=None):
+    def __init__(self, mode="training", end_to_end=False, transform=None, is_unpaired=False):
         assert mode == 'training' or mode == 'testing'
         network = "efg"
         if end_to_end is True:
@@ -60,6 +61,8 @@ class EFGDataset(Dataset):
             current_data_folder + "/targets/scream/*.jpg")
 
         self.s_filenames = s_filenames + s_filenames + s_filenames
+        if is_unpaired:
+            shuffle(self.s_filenames)
         self.e_filenames = smile_filenames + anger_filenames + scream_filenames
         assert len(self.s_filenames) == len(self.e_filenames)
         self.transform = transform
@@ -135,7 +138,7 @@ class Normalize(object):
 
 if __name__ == "__main__":
     # test dataloader
-    transformed_dataset = EFGDataset(mode='testing', end_to_end=True,
+    transformed_dataset = EFGDataset(mode='testing', end_to_end=True, is_unpaired=False,
                                      transform=transforms.Compose([AugmentImage(), ToTensor(), Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])]))
 
     dataloader = DataLoader(transformed_dataset,
