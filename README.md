@@ -21,6 +21,3 @@ Refer these pages for WGAN:
 - https://wiseodd.github.io/techblog/2017/02/04/wasserstein-gan/
 - https://paper.dropbox.com/doc/Wasserstein-GAN-GvU0p2V9ThzdwY3BbhoP7
 
-
-## Note
-- Not suppor batch_size != 1
