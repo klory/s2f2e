@@ -13,7 +13,7 @@ class Option(object):
         parser.add_argument("--epoch_num", type=int, default=100, help="number of epochs")
         parser.add_argument("--input_nc", type=int, default=3, help="number of channels of input(image)")
         parser.add_argument("--output_nc", type=int, default=3, help="number of channels of output(image)")
-        parser.add_argument("--nfg", type=int, default=128, help="number of filters of the first conv layer of genrator.")
+        parser.add_argument("--nfg", type=int, default=64, help="number of filters of the first conv layer of genrator.")
         parser.add_argument("--no_dropout", type="bool", nargs="?", const=True, default=False, help="whether to use dropout.")
         parser.add_argument("--batch_size", type=int, default=8, help="batch size")
         parser.add_argument("--out_dir", type=str, default="./out/image/", help="location to store output images.")

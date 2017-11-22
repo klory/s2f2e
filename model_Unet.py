@@ -172,11 +172,11 @@ class Unet(BaseModel):
             Image.fromarray(img_tgt[i]).save(self.out_dir + str(label) + '_source.jpg')
             if 'EFG' in self.model:
                 if self.expres_code == 0:
-                    Image.fromarray(img_fake[i]).save(self.out_dir + str(label) + '_fake_smile.jpg')
+                    Image.fromarray(img_fake[i]).save(self.out_dir + str(label) + '_' + str(i) + '_fake_smile.jpg')
                 elif self.expres_code == 1:
-                    Image.fromarray(img_fake[i]).save(self.out_dir + str(label) + '_fake_anger.jpg')
+                    Image.fromarray(img_fake[i]).save(self.out_dir + str(label) + '_' + str(i) + '_fake_anger.jpg')
                 else:
-                    Image.fromarray(img_fake[i]).save(self.out_dir + str(label) + '_fake_smile.jpg')
+                    Image.fromarray(img_fake[i]).save(self.out_dir + str(label) + '_' + str(i) + '_fake_smile.jpg')
         # save loss plt
         length = len(self.loss_D_reals)
         x = np.arange(length)
@@ -185,7 +185,7 @@ class Unet(BaseModel):
         for i in range(4):
             plt.plot(x, losses[i], label=labels[i])
         plt.legend()
-        plt.savefig(self.out_loss + str(label) + '_loss.jpg')
+        plt.savefig(self.out_loss + '_loss.jpg')
         plt.close()
 
     def print_current_loss(self):
