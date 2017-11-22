@@ -5,3 +5,4 @@ __pycache__/
 mytest.py
 *.pyc
 *.pth
+test.py

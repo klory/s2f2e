@@ -17,7 +17,7 @@ class Option(object):
         parser.add_argument("--batch_size", type=int, default=1, help="batch size")
         parser.add_argument("--out_dir", type=str, default="./out/image/", help="location to store output images.")
         parser.add_argument("--save_dir", type=str, default="./out/network/", help="location to store networks.")
-        parser.add_argument("--model", type=str, default="NFG_LSGAN", help="which model to implement: EFG_WGAN, EFG_LSGAN, NFG_WGAN, NFG_LSGAN, CYC_EFG_LSGAN, CYC_EFG_WGAN")
+        parser.add_argument("--model", type=str, default="EFG_LSGAN", help="which model to implement: EFG_WGAN, EFG_LSGAN, NFG_WGAN, NFG_LSGAN, CYC_EFG_LSGAN, CYC_EFG_WGAN")
         parser.add_argument("--lam_cyc", type=int, default=10, help="lambda to balance loss_g_gan loss_g_idt and loss_g_l1.")
         parser.add_argument("--lam_idt", type=int, default=10, help="lambda to balance loss_g_gan loss_g_idt and loss_g_l1.")
         parser.add_argument("--beta1", type=float, default=0.5, help="beta1 for adam")

@@ -101,23 +101,23 @@ class Cycle(BaseModel):
         self.real_A = Variable(self.input_A)
         self.real_B = Variable(self.input_B)
         if 'EFG' in self.model:
-            self.real_label = Variable(sefl.expression_label)
+            self.real_label = Variable(self.expression_label)
 
     def backward_D(self, netD, real, fake):
         D_real = netD(real)
         D_fake = netD(fake) 
 
         if 'LSGAN' in self.model:
-            loss_D_real = self.criterionGAN(D_real, True)
-            loss_D_fake = self.riterionGAN(D_fake, False)
-            loss_D = (loss_D_real + loss_D_fake) * 0.5
+            self.loss_D_real = self.criterionGAN(D_real, True)
+            self.loss_D_fake = self.riterionGAN(D_fake, False)
+            self.loss_D = (self.loss_D_real + self.loss_D_fake) * 0.5
         else:
-            loss_D_real = torch.mean(D_real)
-            loss_D_fake = torch.mean(D_fake)
-            loss_D = -(loss_D_real - loss_D_fake)
+            self.loss_D_real = torch.mean(D_real)
+            self.loss_D_fake = torch.mean(D_fake)
+            self.loss_D = -(self.loss_D_real -self.loss_D_fake)
 
-        loss_D.backward()
-        return loss_D
+        self.loss_D.backward()
+        return self.loss_D
 
     def backward_D_A(self):
         fake_B = self.net_G_AtoB(self.real_A)
@@ -177,17 +177,20 @@ class Cycle(BaseModel):
     def optimize(self):
         self.forward()
 
-        self.optimer_G.zero_grad()
+        self.optimizer_G.zero_grad()
         self.backward_G()
         self.optimizer_G.step()
 
-        self.optimer_D_A.zero_grad()
+        self.optimizer_D_A.zero_grad()
         self.backward_D_A()
         self.optimizer_D_A.step()
 
-        self.optimer_D_B.zero_grad()
+        self.optimizer_D_B.zero_grad()
         self.backward_D_B()
         self.optimizer_D_B.step()
+
+    def print_current_loss(self):
+        print("loss_D_A: %f\t loss_D_B: %f\t loss_G_A: %f\t loss_G_A: %f\t loss_cyc_A: %f\t loss_cyc_B: %f\t" % (self.loss_D_A, self.loss_D_B, self.loss_G_A, selfj))
 
     def save(self, label):
         self.save_network(self.net_G, 'G_Ato_B', label)
