@@ -53,9 +53,10 @@ class Unet(BaseModel):
         # intializer network
         self.net_D = NLayerDiscriminator(self.input_nc, norm_layer=self.norm, use_sigmoid=self.use_sigmoid)
         self.net_G = Unet_G(self.input_nc, self.output_nc, self.which_model, nfg=self.nfg, norm_layer=self.norm)
+        devices = [0,1,2,3]
         if torch.cuda.device_count() > 1:
-            self.net_G = nn.DataParallel(self.net_G)
-            self.net_D = nn.DataParallel(self.net_D)
+            self.net_G = nn.DataParallel(self.net_G, device_ids=devices)
+            self.net_D = nn.DataParallel(self.net_D, device_ids=devices)
         if torch.cuda.is_available():
             print("Using %d GPUs." % torch.cuda.device_count())
             self.net_G.cuda()
@@ -99,6 +100,7 @@ class Unet(BaseModel):
             self.fake_tgt = self.net_G(self.real_A, self.real_label)
         else:
             self.fake_tgt = self.net_G(self.real_A, None)
+        print("In Model: input size", self.real_A.size()) 
 
     def backward_D(self):
         D_real = self.net_D(self.real_tgt)
