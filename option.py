@@ -10,6 +10,7 @@ class Option(object):
         parser.register("type", "bool", lambda v: v.lower() == "true")
 
         parser.add_argument("--img_size", type=int, default=128, help="size of input images.")
+        parser.add_argument("--epoch_num", type=int, default=100, help="number of epochs")
         parser.add_argument("--input_nc", type=int, default=3, help="number of channels of input(image)")
         parser.add_argument("--output_nc", type=int, default=3, help="number of channels of output(image)")
         parser.add_argument("--nfg", type=int, default=128, help="number of filters of the first conv layer of genrator.")
@@ -25,7 +26,7 @@ class Option(object):
         parser.add_argument("--learning_rate", type=float, default=0.0002, help="learning rate")
         parser.add_argument("--isTrain", type='bool', default=True, help="Specify training or testing phrase")
         parser.add_argument("--disp_freq", type=int, default=5, help="print loss freq, unit: iteration")
-        parser.add_argument("--save_freq", type=int, default=5, help="print loss freq, unit: epoch")
+        parser.add_argument("--save_freq", type=int, default=100, help="print loss freq, unit: epoch")
         parser.add_argument('--gpu_ids', type=str, default='0', help='gpu ids: e.g. 0  0,1,2, 0,2. use -1 for CPU')
 
 

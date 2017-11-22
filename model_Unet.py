@@ -180,15 +180,13 @@ class Unet(BaseModel):
         # save loss plt
         length = len(self.loss_D_reals)
         x = np.arange(length)
-        x = np.tile(x, 4).reshape(4, -1)
         losses = [self.loss_D_reals, self.loss_D_fakes, self.loss_G_GANs, self.loss_G_L1s]
-        z = zip(x, losses)
         labels = ['loss_D_real', 'loss_D_fake', 'loss_G_GAN', 'loss_G_L1']
         for i in range(4):
-            plt.plot(z[i][0], z[i][1], label=labels[i])
+            plt.plot(x, losses[i], label=labels[i])
         plt.legend()
-        plt.savefig(self.out_loss + str(label) + 'loss.jpg')
+        plt.savefig(self.out_loss + str(label) + '_loss.jpg')
         plt.close()
 
     def print_current_loss(self):
-        print('loss_D_real: %f\t, loss_D_fake: %f\t, loss_G_GAN: %f\t loss_G_L1: %f\t' % (self.loss_D_real.data[0], self.loss_D_fake.data[0], self.loss_G_GAN.data[0], self.loss_G_L1.data[0]))
+        print('loss_D_real: %f, loss_D_fake: %f, loss_G_GAN: %f, loss_G_L1: %f' % (self.loss_D_real.data[0], self.loss_D_fake.data[0], self.loss_G_GAN.data[0], self.loss_G_L1.data[0]))

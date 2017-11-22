@@ -8,7 +8,6 @@ opt = Option()()
 model = create_model(opt)
 batch_size = opt.batch_size
 
-
 if 'EFG' in opt.model:
     if 'CYC' in opt.model:
         transformed_dataset = EFGDataset(mode='training', transform=transforms.Compose(
@@ -34,25 +33,28 @@ elif 'NFG' in opt.model:
 
 data_loader = torch.utils.data.DataLoader(transformed_dataset, batch_size=batch_size, shuffle=False)
 
-epoch = 100
+epoch_num = opt.epoch_num
 data_size = len(data_loader)
-#total_steps = epoch * data_size / batch_size
 total_step = 0
-print('data_size: %d, total_step: %d' %(data_size, total_step))
+print('data_size: %d, scheduled_iter_num: %d' %(data_size, epoch_num*data_size))
 
 
-for e in range(epoch):
+for e in range(epoch_num):
     for i, data in enumerate(data_loader):
         model.set_input(data)
         model.optimize()
         model.save_loss()
 
         if total_step % opt.disp_freq == 0:
+            print("iter: {0:5d}  ".format(total_step), end='')
             model.print_current_loss()
 
-    if total_step % opt.save_freq == 0:
-            model.save(e)
+        if total_step != 0 and total_step % opt.save_freq == 0: 
+            print('saving model at iteration {0}...'.format(total_step))
+            model.save(total_step)
 
-    total_step += 1
+        total_step += 1
 
+print('saving model at iteration {0}...'.format(total_step))
+model.save(total_step)
 print('Training complete.')
