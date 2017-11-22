@@ -53,4 +53,6 @@ for e in range(epoch):
     if total_step % opt.save_freq == 0:
             model.save(e)
 
+    total_step += 1
+
 print('Training complete.')
