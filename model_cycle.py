@@ -80,6 +80,8 @@ class Cycle(BaseModel):
         else:
             raise ValueError('%s is not supported.' % self.model)
 
+        print("initializing completed:\n model name: %s\n input_nc: %s\n use_sigmoid: %s\n" % (self.model, self.input_nc, self.use_sigmoid))
+
     def set_input(self, input):
         if 'NFG' in self.model:
             input_A = input['source']
