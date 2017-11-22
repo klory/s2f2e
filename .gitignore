@@ -1,4 +1,7 @@
 data/
+./out/
 .DS_Store
 __pycache__/
 mytest.py
+*.pyc
+*.pth
