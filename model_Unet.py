@@ -154,10 +154,10 @@ class Unet(BaseModel):
         self.optimizer_G.step()
         
     def save_loss(self):
-        self.loss_G_GANs.append(self.loss_G_GAN.data.numpy())
-        self.loss_G_L1s.append(self.loss_G_L1.data.numpy())
-        self.loss_D_reals.append(self.loss_D_real.data.numpy())
-        self.loss_D_fakes.append(self.loss_D_fake.data.numpy())
+        self.loss_G_GANs.append(self.loss_G_GAN.cpu().data.numpy())
+        self.loss_G_L1s.append(self.loss_G_L1.cpu().data.numpy())
+        self.loss_D_reals.append(self.loss_D_real.cpu().data.numpy())
+        self.loss_D_fakes.append(self.loss_D_fake.cpu().data.numpy())
 
     def save(self, label):
         self.save_network(self.net_G, 'G', label)

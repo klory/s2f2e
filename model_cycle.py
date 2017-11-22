@@ -225,12 +225,12 @@ class Cycle(BaseModel):
     def print_current_loss(self):
         print("loss_D_A: %f\t loss_D_B: %f\t loss_G_A: %f\t loss_G_A: %f\t loss_cyc_A: %f\t loss_cyc_B: %f\t" % (self.loss_D_A, self.loss_D_B, self.loss_G_AGAN, self.loss_G_BGAN, self.loss_cyc_A, self.loss_cyc_B))
     def save_loss(self):
-        self.loss_D_As.append(self.loss_D_A)
-        self.loss_D_Bs.append(self.loss_D_B)
-        self.loss_G_AGANs.append(self.loss_G_AGAN)
-        self.loss_G_BGANs.append(self.loss_G_BGAN)
-        self.loss_cyc_As.append(self.loss_cyc_A)
-        self.loss_cyc_Bs.append(self.loss_cyc_B)
+        self.loss_D_As.append(self.loss_D_A.cpu())
+        self.loss_D_Bs.append(self.loss_D_B.cpu())
+        self.loss_G_AGANs.append(self.loss_G_AGAN.cpu())
+        self.loss_G_BGANs.append(self.loss_G_BGAN.cpu())
+        self.loss_cyc_As.append(self.loss_cyc_A.cpu())
+        self.loss_cyc_Bs.append(self.loss_cyc_B.cpu())
 
     def save(self, label):
         # save network
