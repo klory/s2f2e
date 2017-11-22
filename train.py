@@ -25,7 +25,7 @@ elif 'NFG' in opt.model:
         transformed_dataset = NFGDataset(mode='training',transform=transforms.Compose(
             [AugmentImage(),
                 ToTensor(),
-                Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])]), is_unpaired=True)
+                Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])]))
     else:
         transformed_dataset = NFGDataset(mode='training',transform=transforms.Compose(
             [AugmentImage(),
@@ -45,7 +45,12 @@ for e in range(epoch):
     for i, data in enumerate(data_loader):
         model.set_input(data)
         model.optimize()
+        model.save_loss()
 
         if total_step % opt.disp_freq == 0:
             model.print_current_loss()
 
+    if total_step % opt.save_freq == 0:
+            model.save(e)
+
+print('Training complete.')

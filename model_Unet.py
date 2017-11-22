@@ -10,6 +10,7 @@ import numpy as np
 from PIL import Image
 from load_data import *
 from base_model import *
+import matplotlib.pyplot as plt
 
 class Unet(BaseModel):
     def initialize(self, opt):
@@ -70,10 +71,20 @@ class Unet(BaseModel):
             self.optimizer_G = torch.optim.RMSprop(self.net_G.parameters(), lr=self.lr)
             self.optimizer_D = torch.optim.RMSprop(self.net_D.parameters(), lr=self.lr)
 
+        # initialize loss lists
+        self.loss_G_GANs = []
+        self.loss_G_L1s = []
+        self.loss_D_reals = []
+        self.loss_D_fakes = []
+
         # save generated images
-        self.out_dir = opt.out_dir + self.model + '/expression/'
+        self.out_dir = opt.out_dir + self.model + '/images/'
         if not os.path.exists(self.out_dir):
             os.makedirs(self.out_dir)
+
+        self.out_loss = opt.out_dir + self.model + '/losses/'
+        if not os.path.exists(self.out_loss):
+            os.makedirs(self.out_loss)
 
         print("initializing completed:\n model name: %s\n input_nc: %s\n use_sigmoid: %s\n" % (self.model, self.input_nc, self.use_sigmoid))
 
@@ -85,6 +96,7 @@ class Unet(BaseModel):
             input_A = input[0]['source']
             input_tgt = input[0]['target']
             label = self.label_generate(input[1][0], input_A.size(0))
+            self.expres_code = input[1][0]
         else:
             raise ValueError("%s is not suppported." % self.model)
         self.input_A.resize_(input_A.size()).copy_(input_A)
@@ -141,48 +153,42 @@ class Unet(BaseModel):
         self.backward_G()
         self.optimizer_G.step()
         
+    def save_loss(self):
+        self.loss_G_GANs.append(self.loss_G_GAN.data.numpy())
+        self.loss_G_L1s.append(self.loss_G_L1.data.numpy())
+        self.loss_D_reals.append(self.loss_D_real.data.numpy())
+        self.loss_D_fakes.append(self.loss_D_fake.data.numpy())
+
     def save(self, label):
         self.save_network(self.net_G, 'G', label)
         self.save_network(self.net_D, 'D', label)
 
+        img_A = ((np.transpose(self.real_A.cpu().data.numpy(), (0, 2, 3, 1)) + 1) / 2.0 * 255.0).astype(np.uint8)
+        img_tgt = ((np.transpose(self.real_tgt.cpu().data.numpy(), (0, 2, 3, 1)) + 1) / 2.0 * 255.0).astype(np.uint8)
+        fake_numpy = self.fake_tgt.cpu().data.numpy()
+        img_fake = ((np.transpose(fake_numpy, (0, 2, 3, 1)) + 1) / 2.0 * 255.0).astype(np.uint8)
+        for i in range(self.real_A.size()[0]):
+            Image.fromarray(img_A[i]).save(self.out_dir + str(label) + '_source.jpg')
+            Image.fromarray(img_tgt[i]).save(self.out_dir + str(label) + '_source.jpg')
+            if 'EFG' in self.model:
+                if self.expres_code == 0:
+                    Image.fromarray(img_fake[i]).save(self.out_dir + str(label) + '_fake_smile.jpg')
+                elif self.expres_code == 1:
+                    Image.fromarray(img_fake[i]).save(self.out_dir + str(label) + '_fake_anger.jpg')
+                else:
+                    Image.fromarray(img_fake[i]).save(self.out_dir + str(label) + '_fake_smile.jpg')
+        # save loss plt
+        length = len(self.loss_D_reals)
+        x = np.arange(length)
+        x = np.tile(x, 4).reshape(4, -1)
+        losses = [self.loss_D_reals, self.loss_D_fakes, self.loss_G_GANs, self.loss_G_L1s]
+        z = zip(x, losses)
+        labels = ['loss_D_real', 'loss_D_fake', 'loss_G_GAN', 'loss_G_L1']
+        for i in range(4):
+            plt.plot(z[i][0], z[i][1], label=labels[i])
+        plt.legend()
+        plt.savefig(self.out_loss + str(label) + 'loss.jpg')
+        plt.close()
+
     def print_current_loss(self):
         print('loss_D_real: %f\t, loss_D_fake: %f\t, loss_G_GAN: %f\t loss_G_L1: %f\t' % (self.loss_D_real.data[0], self.loss_D_fake.data[0], self.loss_G_GAN.data[0], self.loss_G_L1.data[0]))
-
-    def save_img(self, epoch):
-        for i, data in enumerate(self.data_loader):
-            if i > 20:
-                break
-            # test_A: neutral face image
-            if torch.cuda.is_available():
-                test_A = Variable(data[0]['source'].cuda())
-                expression_label = data[1][0]
-                test = Variable(data[0]['target'].cuda())
-                # one-hot expression code
-                v = Variable(torch.Tensor([[1,0,0]]).cuda())
-            else:
-                test_A = Variable(data[0]['source'])
-                expression_label = data[1][0]
-                test = Variable(data[0]['target'])
-                v = Variable(torch.Tensor([[1,0,0]]))
-            # obtain the bottle-neck of encoder
-            fake_inter = self.encoder_G(test_A)
-            # reshape tensor for linear layer in decoder
-            fake_inter = fake_inter.view(1, -1)
-
-            # expression_label, 0: smile, 1: anger, 2: scream
-            fake = self.decoder_G(torch.cat((fake_inter, v), 1))
-            fake_numpy = fake[0].cpu().data.numpy()
-            img_fake = ((np.transpose(fake_numpy, (1, 2, 0)) + 1) / 2.0 * 255.0).astype(np.uint8)
-            if expression_label == 0: 
-                Image.fromarray(img_fake).save(self.out_dir + str(epoch) + '_' + str(i) + 'fake_smile' + '.jpg')
-            elif expression_label == 1:
-                Image.fromarray(img_fake).save(self.out_dir + str(epoch) + '_' + str(i) + 'fake_anger' + '.jpg')
-            else:
-                Image.fromarray(img_fake).save(self.out_dir + str(epoch) + '_' + str(i) + 'fake_scream' + '.jpg')
-
-            img_A = ((np.transpose(test_A[0].cpu().data.numpy(), (1, 2, 0)) + 1) / 2.0 * 255.0).astype(np.uint8)
-            Image.fromarray(img_A).save(self.out_dir + str(epoch) + '_' + str(i) + 'A' + '.jpg')
-
-    def __call__(self):
-        self.train()
-        print('training complete')

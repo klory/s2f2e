@@ -1,5 +1,5 @@
 data/
-./out/
+out/
 .DS_Store
 __pycache__/
 mytest.py
