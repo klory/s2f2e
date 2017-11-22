@@ -13,7 +13,7 @@ import torch
 
 class Cycle(BaseModel):
     def initialize(self, opt):
-        BaseModel.initialize(opt)
+        BaseModel.initialize(self, opt)
         
         self.model = opt.model
         if 'EFG' in self.model:
@@ -40,7 +40,6 @@ class Cycle(BaseModel):
             self.use_sigmoid = False
             self.norm = functools.partial(nn.BatchNorm2d, affine=True)
             self.lr = opt.learning_rate
-            self.lam = opt.lam
             self.beta1 = opt.beta1
             self.beta2 = opt.beta2
             self.criterionGAN = nn.MSELoss()
@@ -70,14 +69,14 @@ class Cycle(BaseModel):
             self.net_D_A.cuda()
             self.net_D_B.cuda()
         # set up optimizer
-        if 'WGAN' in self.model:
+        if 'LSGAN' in self.model:
             self.optimizer_G = torch.optim.Adam(list(self.net_G_AtoB.parameters()) + list(self.net_G_BtoA.parameters()), lr=self.lr, betas=(self.beta1, self.beta2))
             self.optimizer_D_A = torch.optim.Adam(self.net_D_A.parameters(), lr=self.lr, betas=(self.beta1, self.beta2))
             self.optimizer_D_B = torch.optim.Adam(self.net_D_B.parameters(), lr=self.lr, betas=(self.beta1, self.beta2))
-        elif 'LSGAN' in self.model:
+        elif 'WGAN' in self.model:
             self.optimizer_G = torch.optim.RMSprop(list(self.net_G_AtoB.parameters()) + list(self.net_G_BtoA.parameters()), lr=self.lr)
-            self.optimizer_D_A = torch.optim.RMSprop(self.net_D_A.paramerters(), lr=self.lr)
-            self.optimizer_D_B = torch.optim.RMSprop(self.net_D_B.paramerter(), lr=self.lr)
+            self.optimizer_D_A = torch.optim.RMSprop(self.net_D_A.parameters(), lr=self.lr)
+            self.optimizer_D_B = torch.optim.RMSprop(self.net_D_B.parameters(), lr=self.lr)
         else:
             raise ValueError('%s is not supported.' % self.model)
 
@@ -91,8 +90,8 @@ class Cycle(BaseModel):
             label = self.label_generate(input[1][0], self.batch_size)
         else:
             raise ValueError("%s is not suppported." % self.model)
-        self.input_A.resize_(input_A.szie()).copy_(input_A)
-        self.input_B.resize_(input_B.szie()).copy_(input_B)
+        self.input_A.resize_(input_A.size()).copy_(input_A)
+        self.input_B.resize_(input_B.size()).copy_(input_B)
 
         if 'EFG' in self.model:
             self.expression_label.resize_(label.size()).copy_(label)
@@ -108,8 +107,9 @@ class Cycle(BaseModel):
         D_fake = netD(fake) 
 
         if 'LSGAN' in self.model:
-            self.loss_D_real = self.criterionGAN(D_real, True)
-            self.loss_D_fake = self.riterionGAN(D_fake, False)
+            self.loss_D_real = self.criterionGAN(D_real, Variable(self.Tensor(D_real.size()).fill_(1.0), requires_grad=False))
+            self.loss_D_fake = self.criterionGAN(D_fake, Variable(self.Tensor(D_real.size()).fill_(0.0), requires_grad=False))
+
             self.loss_D = (self.loss_D_real + self.loss_D_fake) * 0.5
         else:
             self.loss_D_real = torch.mean(D_real)
@@ -120,18 +120,24 @@ class Cycle(BaseModel):
         return self.loss_D
 
     def backward_D_A(self):
-        fake_B = self.net_G_AtoB(self.real_A)
+        if 'NFG' in self.model:
+            fake_B = self.net_G_AtoB(self.real_A)
+        else:
+            fake_B = self.net_G_AtoB(self.real_A, self.real_label)
         # Note: this part is different from the original code. We follow paper "DY encouragesGtotranslateXintooutputsindistinguishablefromdomainY,andviceversa for DX and F"
-        loss_D_A = backward_D(net_D_A, self.input_B, fake_B)
+        loss_D_A = self.backward_D(self.net_D_A, self.real_B, fake_B)
         self.loss_D_A = loss_D_A.data[0]
 
     def backward_D_B(self):
-        fake_A = self.net_G_AtoB(self.real_B)
-        loss_D_B = backward_D(net_D_B, self.input_A, fake_A)
-        self.loss_D_A = loss_D_A.data[0]
+        if 'NFG' in self.model:
+            fake_A = self.net_G_BtoA(self.real_B)
+        else:
+            fake_A = self.net_G_BtoA(self.real_B, self.real_label)
+        loss_D_B = self.backward_D(self.net_D_B, self.real_A, fake_A)
+        self.loss_D_B = loss_D_B.data[0]
 
     def backward_G(self):
-        if 'EFG' in self.model:
+        if 'NFG' in self.model:
             fake_B = self.net_G_AtoB(self.real_A)
             fake_A = self.net_G_BtoA(self.real_B)
             cyc_A = self.net_G_BtoA(fake_B)
@@ -143,8 +149,8 @@ class Cycle(BaseModel):
             cyc_B = self.net_G_AtoB(fake_A, self.real_label)
 
 
-        loss_cyc_A = self.criterionL1(self.real_A, cyc_A)
-        loss_cyc_B = self.criterionL1(self.real_B, cyc_B)
+        loss_cyc_A = self.criterionL1(cyc_A, self.real_A)
+        loss_cyc_B = self.criterionL1(cyc_B, self.real_B)
 
         D_fake_B = self.net_D_A(fake_B)
         #loss_idt_A = self.criterionL1(self.real_B, fake_B)
@@ -153,8 +159,8 @@ class Cycle(BaseModel):
         #loss_idt_B = self.criterionL1(self.real_A, fake_A)
 
         if 'LSGAN' in self.model:
-            loss_G_A = self.criterionGAN(D_fake_B, True)
-            loss_G_B = self.criterionGAN(D_fake_A, True)
+            loss_G_A = self.criterionGAN(D_fake_B, Variable(self.Tensor(D_fake_B.size()).fill_(1.0), requires_grad=False))
+            loss_G_B = self.criterionGAN(D_fake_A, Variable(self.Tensor(D_fake_B.size()).fill_(1.0), requires_grad=False))
         else:
             loss_G_A = - torch.mean(D_fake_B)
             loss_G_B = - torch.mean(D_fake_A)
@@ -185,15 +191,21 @@ class Cycle(BaseModel):
         self.backward_D_A()
         self.optimizer_D_A.step()
 
+        for p in self.net_D_A.parameters():
+            p.data.clamp_(-0.01, 0.01)
+
         self.optimizer_D_B.zero_grad()
         self.backward_D_B()
         self.optimizer_D_B.step()
 
+        for p in self.net_D_B.parameters():
+            p.data.clamp_(-0.01, 0.01)
+
     def print_current_loss(self):
-        print("loss_D_A: %f\t loss_D_B: %f\t loss_G_A: %f\t loss_G_A: %f\t loss_cyc_A: %f\t loss_cyc_B: %f\t" % (self.loss_D_A, self.loss_D_B, self.loss_G_A, selfj))
+        print("loss_D_A: %f\t loss_D_B: %f\t loss_G_A: %f\t loss_G_A: %f\t loss_cyc_A: %f\t loss_cyc_B: %f\t" % (self.loss_D_A, self.loss_D_B, self.loss_G_A, self.loss_G_B, self.loss_cyc_A, self.loss_cyc_B))
 
     def save(self, label):
-        self.save_network(self.net_G, 'G_Ato_B', label)
+        self.save_network(self.net_G_AtoB, 'G_Ato_B', label)
         self.save_network(self.net_G_BtoA, 'G_Bto_A', label)
         self.save_network(self.net_D_A, 'D_A', label)
         self.save_network(self.net_D_B, 'D_B', label)
