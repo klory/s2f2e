@@ -43,7 +43,7 @@ class BaseModel():
             v = np.concatenate((v0, v0, v1), axis=1)
             v = np.repeat(v, batch_size, axis=0)
 
-        return self.Tensor(v)
+        return self.Tensor(v.astype(np.float))
     
     def save_network(self, network, network_label, epoch_label):
         save_file = '%s_net_%s.pth' % (epoch_label, network_label)

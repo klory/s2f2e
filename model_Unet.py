@@ -143,6 +143,7 @@ class Unet(BaseModel):
 
     def print_current_loss(self):
         print('loss_D_real: %f\t, loss_D_fake: %f\t, loss_G_GAN: %f\t loss_G_L1: %f\t' % (self.loss_D_real.data[0], self.loss_D_fake.data[0], self.loss_G_GAN.data[0], self.loss_G_L1.data[0]))
+
     def save_img(self, epoch):
         for i, data in enumerate(self.data_loader):
             if i > 20:

@@ -62,10 +62,10 @@ class Unet_G(nn.Module):
             use_bias = norm_layer == nn.InstanceNorm2d
 
         self.conv1 = nn.Sequential(nn.ReflectionPad2d(3),
-                 nn.Conv2d(input_nc, nfg/2, kernel_size=7, padding=0, bias=use_bias),
-                 norm_layer(nfg/2),
+                 nn.Conv2d(input_nc, nfg//2, kernel_size=7, padding=0, bias=use_bias),
+                 norm_layer(nfg//2),
                  nn.ReLU(True))
-        self.conv2 = ConvBlock(nfg/2, nfg, 3, 2, 1, norm_layer, use_dropout)
+        self.conv2 = ConvBlock(nfg//2, nfg, 3, 2, 1, norm_layer, use_dropout)
 
         self.conv3 = ConvBlock(nfg, nfg*2, 3, 2, 1, norm_layer, use_dropout)
 
@@ -81,7 +81,7 @@ class Unet_G(nn.Module):
         self.res5 = ResnetBlock(nfg*2, padding_type, norm_layer, use_dropout, use_bias)
 
         self.convTran3 = ConvTransBlock(nfg*2*2, nfg, norm_layer=nn.BatchNorm2d, use_dropout=False, first_layer=False, last_layer=False)
-        self.convTran4 = ConvTransBlock(nfg*2, nfg/2, norm_layer=nn.BatchNorm2d, use_dropout=False, first_layer=False, last_layer=False)
+        self.convTran4 = ConvTransBlock(nfg*2, nfg//2, norm_layer=nn.BatchNorm2d, use_dropout=False, first_layer=False, last_layer=False)
 
         self.conv6 = nn.Sequential(nn.ReflectionPad2d(3),
                  nn.Conv2d(nfg, 3, kernel_size=7, padding=0, bias=use_bias),
