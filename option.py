@@ -14,7 +14,7 @@ class Option(object):
         parser.add_argument("--output_nc", type=int, default=3, help="number of channels of output(image)")
         parser.add_argument("--nfg", type=int, default=128, help="number of filters of the first conv layer of genrator.")
         parser.add_argument("--no_dropout", type="bool", nargs="?", const=True, default=False, help="whether to use dropout.")
-        parser.add_argument("--batch_size", type=int, default=1, help="batch size")
+        parser.add_argument("--batch_size", type=int, default=8, help="batch size")
         parser.add_argument("--out_dir", type=str, default="./out/image/", help="location to store output images.")
         parser.add_argument("--save_dir", type=str, default="./out/network/", help="location to store networks.")
         parser.add_argument("--model", type=str, default="EFG_WGAN", help="which model to implement: EFG_WGAN, EFG_LSGAN, NFG_WGAN, NFG_LSGAN, CYC_EFG_LSGAN, CYC_EFG_WGAN")
@@ -26,6 +26,8 @@ class Option(object):
         parser.add_argument("--isTrain", type='bool', default=True, help="Specify training or testing phrase")
         parser.add_argument("--disp_freq", type=int, default=5, help="print loss freq")
         parser.add_argument("--save_freq", type=int, default=5, help="print loss freq")
+        parser.add_argument('--gpu_ids', type=str, default='0', help='gpu ids: e.g. 0  0,1,2, 0,2. use -1 for CPU')
+
 
         return parser
 

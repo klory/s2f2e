@@ -49,5 +49,3 @@ for e in range(epoch):
         if total_step % opt.disp_freq == 0:
             model.print_current_loss()
 
-        if total_step % opt.save_freq == 0:
-            model.save(e)

@@ -53,11 +53,12 @@ class Unet(BaseModel):
         # intializer network
         self.net_D = NLayerDiscriminator(self.input_nc, norm_layer=self.norm, use_sigmoid=self.use_sigmoid)
         self.net_G = Unet_G(self.input_nc, self.output_nc, self.which_model, nfg=self.nfg, norm_layer=self.norm)
+        devices = self.opt.gpu_ids 
         if torch.cuda.device_count() > 1:
-            self.net_G = nn.DataParallel(self.net_G)
-            self.net_D = nn.DataParallel(self.net_D)
+            self.net_G = nn.DataParallel(self.net_G, device_ids=devices)
+            self.net_D = nn.DataParallel(self.net_D, device_ids=devices)
         if torch.cuda.is_available():
-            print("Using %d GPUs." % torch.cuda.device_count())
+            print("Using %d GPUs." % len(devices))
             self.net_G.cuda()
             self.net_D.cuda()
 
@@ -83,7 +84,7 @@ class Unet(BaseModel):
         elif 'EFG' in self.model:
             input_A = input[0]['source']
             input_tgt = input[0]['target']
-            label = self.label_generate(input[1][0], self.batch_size)
+            label = self.label_generate(input[1][0], input_A.size(0))
         else:
             raise ValueError("%s is not suppported." % self.model)
         self.input_A.resize_(input_A.size()).copy_(input_A)
