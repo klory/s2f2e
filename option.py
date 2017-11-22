@@ -26,6 +26,8 @@ class Option(object):
         parser.add_argument("--isTrain", type='bool', default=True, help="Specify training or testing phrase")
         parser.add_argument("--disp_freq", type=int, default=5, help="print loss freq")
         parser.add_argument("--save_freq", type=int, default=5, help="print loss freq")
+        parser.add_argument('--gpu_ids', type=str, default='0', help='gpu ids: e.g. 0  0,1,2, 0,2. use -1 for CPU')
+
 
         return parser
 

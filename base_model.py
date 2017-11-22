@@ -13,6 +13,12 @@ class BaseModel():
         self.Tensor = torch.cuda.FloatTensor if torch.cuda.is_available() else torch.Tensor
         if not os.path.exists(self.save_dir):
             os.makedirs(self.save_dir)
+        str_ids = self.opt.gpu_ids.split(',')
+        self.opt.gpu_ids = []
+        for str_id in str_ids:
+            id = int(str_id)
+            if id >= 0:
+                self.opt.gpu_ids.append(id)
 
     def set_input(self):
 
