@@ -89,6 +89,7 @@ class Unet_G(nn.Module):
                  nn.ReLU(True))
 
     def forward(self, x, v):
+        print("In Model: input size", x.size())
         out_conv1 = self.conv1(x)
         out_conv2 = self.conv2(out_conv1)
         out_conv3 = self.conv3(out_conv2)

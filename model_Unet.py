@@ -84,7 +84,7 @@ class Unet(BaseModel):
         elif 'EFG' in self.model:
             input_A = input[0]['source']
             input_tgt = input[0]['target']
-            label = self.label_generate(input[1][0], self.batch_size)
+            label = self.label_generate(input[1][0], input_A.size(0))
         else:
             raise ValueError("%s is not suppported." % self.model)
         self.input_A.resize_(input_A.size()).copy_(input_A)
@@ -100,7 +100,6 @@ class Unet(BaseModel):
             self.fake_tgt = self.net_G(self.real_A, self.real_label)
         else:
             self.fake_tgt = self.net_G(self.real_A, None)
-        print("In Model: input size", self.real_A.size()) 
 
     def backward_D(self):
         D_real = self.net_D(self.real_tgt)
