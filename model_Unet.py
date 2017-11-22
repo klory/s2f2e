@@ -91,11 +91,9 @@ class Unet(BaseModel):
         if 'EFG' in self.model:
             self.expression_label.resize_(label.size()).copy_(label)
 
-
     def forward(self):
         self.real_A = Variable(self.input_A)
         self.real_tgt = Variable(self.input_tgt)
-        print(self.real_A, self.real_tgt)
         if 'EFG' in self.model:
             self.real_label = Variable(self.expression_label)
             self.fake_tgt = self.net_G(self.real_A, self.real_label)

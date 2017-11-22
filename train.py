@@ -14,12 +14,12 @@ if 'EFG' in opt.model:
         transformed_dataset = EFGDataset(mode='training', transform=transforms.Compose(
             [AugmentImage(),
             ToTensor(),
-            Normalize([0.5,0.5,0.5],[0.5,0,5,0.5])]), is_unpaired=True)
+            Normalize([0.5,0.5,0.5],[0.5,0.5,0.5])]), is_unpaired=True)
     else:
         transformed_dataset = EFGDataset(mode='training', transform=transforms.Compose(
             [AugmentImage(),
             ToTensor(),
-            Normalize([0.5,0.5,0.5],[0.5,0,5,0.5])]), is_unpaired=True)
+            Normalize([0.5,0.5,0.5],[0.5,0.5,0.5])]), is_unpaired=True)
 elif 'NFG' in opt.model:
     if 'CYC' in opt.model:
         transformed_dataset = NFGDataset(mode='training',transform=transforms.Compose(
