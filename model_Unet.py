@@ -145,11 +145,9 @@ class Unet(BaseModel):
     def optimize(self):
         self.forward()
 
-        """
         self.optimizer_D.zero_grad()
         self.backward_D()
-        self.optimizer_D.step()
-        """
+        #self.optimizer_D.step()
 
         if 'WGAN' in self.model:
             for p in self.net_D.parameters():
