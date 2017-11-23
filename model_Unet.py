@@ -121,11 +121,12 @@ class Unet(BaseModel):
         if 'WGAN' in self.model:
             self.loss_D_real = torch.mean(D_real)
             self.loss_D_fake = torch.mean(D_fake)
+            self.loss_D = -(self.loss_D_real -self.loss_D_fake)
         else:
             self.loss_D_real = self.criterionGAN(D_real, Variable(self.Tensor(D_real.size()).fill_(1.0), requires_grad=False))
             self.loss_D_fake = self.criterionGAN(D_fake, Variable(self.Tensor(D_real.size()).fill_(0.0), requires_grad=False))
+            self.loss_D = (self.loss_D_real + self.loss_D_fake) * 0.5
 
-        self.loss_D = (self.loss_D_real + self.loss_D_fake) * 0.5
         self.loss_D.backward(retain_graph=True)
 
     def backward_G(self):
