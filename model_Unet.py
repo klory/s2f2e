@@ -147,8 +147,9 @@ class Unet(BaseModel):
         self.backward_D()
         self.optimizer_D.step()
 
-        for p in self.net_D.parameters():
-            p.data.clamp_(-0.01, 0.01)
+        if 'WGAN' in self.model:
+            for p in self.net_D.parameters():
+                p.data.clamp_(-0.01, 0.01)
 
         self.optimizer_G.zero_grad()
         self.backward_G()
