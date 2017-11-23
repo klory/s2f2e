@@ -29,6 +29,7 @@ class Option(object):
         parser.add_argument("--disp_freq", type=int, default=5, help="print loss freq, unit: iteration")
         parser.add_argument("--save_freq", type=int, default=100, help="print loss freq, unit: epoch")
         parser.add_argument('--gpu_ids', type=str, default='0', help='gpu ids: e.g. 0  0,1,2, 0,2. use -1 for CPU')
+        parser.add_argument('--is_small', type='bool', default=False, help='whether to choose small set to test overfit')
 
 
         return parser
