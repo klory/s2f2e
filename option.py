@@ -21,6 +21,7 @@ class Option(object):
         parser.add_argument("--model", type=str, default="EFG_WGAN", help="which model to implement: EFG_WGAN, EFG_LSGAN, NFG_WGAN, NFG_LSGAN, CYC_EFG_LSGAN, CYC_EFG_WGAN")
         parser.add_argument("--lam_cyc", type=int, default=10, help="lambda to balance loss_g_gan loss_g_idt and loss_g_l1.")
         parser.add_argument("--lam_idt", type=int, default=10, help="lambda to balance loss_g_gan loss_g_idt and loss_g_l1.")
+        parser.add_argument("--lam_L1", type=int, default=10, help="lambda to balance loss_g_gan loss_g_idt and loss_g_l1.")
         parser.add_argument("--beta1", type=float, default=0.5, help="beta1 for adam")
         parser.add_argument("--beta2", type=float, default=0.999, help="beta2 for adam")
         parser.add_argument("--learning_rate", type=float, default=0.0002, help="learning rate")

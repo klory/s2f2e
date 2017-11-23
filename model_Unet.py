@@ -39,7 +39,8 @@ class Unet(BaseModel):
             self.batch_size = opt.batch_size
             self.norm = functools.partial(nn.BatchNorm2d, affine=True)
             self.lr = opt.learning_rate
-            self.lam = opt.lam_cyc
+            self.lam_cyc = opt.lam_cyc
+            self.lam_l1 = opt.lam_l1
             self.beta1 = opt.beta1
             self.beta2 = opt.beta2
             self.criterionGAN = nn.MSELoss()
@@ -136,7 +137,7 @@ class Unet(BaseModel):
         else:
             self.loss_G_GAN = self.criterionGAN(D_fake, Variable(self.Tensor(D_real.size()).fill_(1.0), requires_grad=False))
 
-        self.loss_G = self.loss_G_GAN + self.loss_G_L1 * self.lam
+        self.loss_G = self.loss_G_GAN + self.loss_G_L1 * self.lam_l1
         self.loss_G.backward()
 
     def optimize(self):

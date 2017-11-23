@@ -28,8 +28,6 @@ class Cycle(BaseModel):
         self.output_nc = opt.output_nc
         self.nfg = opt.nfg
         self.batch_size = opt.batch_size
-        self.lam_cyc = opt.lam_cyc
-        self.lam_idt = opt.lam_idt
         if self.nfg == 128:
             self.num_downs = 7
         elif self.nfg == 64:
@@ -42,6 +40,9 @@ class Cycle(BaseModel):
             self.use_sigmoid = False
             self.norm = functools.partial(nn.BatchNorm2d, affine=True)
             self.lr = opt.learning_rate
+            self.lam_cyc = opt.lam_cyc
+            self.lam_l1 = opt.lam_l1
+            self.lam_idt = opt.lam_idt
             self.beta1 = opt.beta1
             self.beta2 = opt.beta2
             self.criterionGAN = nn.MSELoss()
