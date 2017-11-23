@@ -14,7 +14,7 @@ data_folder = "./data/" + str(image_size) + "/"
 
 
 class NFGDataset(Dataset):
-    def __init__(self, mode, transform=None):
+    def __init__(self, mode, transform=None, is_small=False):
         assert mode == 'training' or mode == 'testing'
         import glob
         self.s_filenames = glob.glob(
@@ -25,6 +25,10 @@ class NFGDataset(Dataset):
                 data_folder + "nfg_testing/sources/*.jpg")
             self.p_filenames = glob.glob(
                 data_folder + "nfg_testing/targets/*.jpg")
+        
+        if is_small:
+            self.s_filenames = self.s_filenames[:8]
+            self.p_filenames = self.p_filenames[:8]
 
         assert len(self.s_filenames) == len(self.p_filenames)
         self.transform = transform
@@ -44,7 +48,7 @@ class NFGDataset(Dataset):
 
 
 class EFGDataset(Dataset):
-    def __init__(self, mode="training", end_to_end=False, transform=None, is_unpaired=False):
+    def __init__(self, mode="training", end_to_end=False, transform=None, is_unpaired=False, is_small=False):
         assert mode == 'training' or mode == 'testing'
         network = "efg"
         if end_to_end is True:
@@ -59,6 +63,12 @@ class EFGDataset(Dataset):
             current_data_folder + "/targets/anger/*.jpg")
         scream_filenames = glob.glob(
             current_data_folder + "/targets/scream/*.jpg")
+
+        if is_small:
+            s_filenames = s_filenames[:8]
+            smile_filenames = smile_filenames[:8]
+            anger_filenames = anger_filenames[:8]
+            scream_filenames = scream_filenames[:8]
 
         self.s_filenames = s_filenames + s_filenames + s_filenames
         if is_unpaired:
