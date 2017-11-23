@@ -138,8 +138,8 @@ class Unet(BaseModel):
         else:
             self.loss_G_GAN = self.criterionGAN(D_fake, Variable(self.Tensor(D_real.size()).fill_(1.0), requires_grad=False))
 
-        #self.loss_G = self.loss_G_GAN + self.loss_G_L1 * self.lam_l1
-        self.loss_G = self.loss_G_L1 * self.lam_l1
+        self.loss_G = self.loss_G_GAN + self.loss_G_L1 * self.lam_l1
+        #self.loss_G = self.loss_G_L1 * self.lam_l1
         self.loss_G.backward()
 
     def optimize(self):
@@ -147,7 +147,7 @@ class Unet(BaseModel):
 
         self.optimizer_D.zero_grad()
         self.backward_D()
-        #self.optimizer_D.step()
+        self.optimizer_D.step()
 
         if 'WGAN' in self.model:
             for p in self.net_D.parameters():
