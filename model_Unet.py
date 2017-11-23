@@ -176,7 +176,7 @@ class Unet(BaseModel):
                 elif self.expres_code == 1:
                     Image.fromarray(img_fake[i]).save(self.out_dir + str(label) + '_' + str(i) + '_fake_anger.jpg')
                 else:
-                    Image.fromarray(img_fake[i]).save(self.out_dir + str(label) + '_' + str(i) + '_fake_smile.jpg')
+                    Image.fromarray(img_fake[i]).save(self.out_dir + str(label) + '_' + str(i) + '_fake_scream.jpg')
         # save loss plt
         length = len(self.loss_D_reals)
         x = np.arange(length)
