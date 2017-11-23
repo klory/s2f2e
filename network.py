@@ -86,7 +86,7 @@ class Unet_G(nn.Module):
         self.conv6 = nn.Sequential(nn.ReflectionPad2d(3),
                  nn.Conv2d(nfg, 3, kernel_size=7, padding=0, bias=use_bias),
                  norm_layer(3),
-                 nn.tanh()
+                 nn.tanh())
 
     def forward(self, x, v):
         out_conv1 = self.conv1(x)
