@@ -168,8 +168,8 @@ class Unet(BaseModel):
         fake_numpy = self.fake_tgt.cpu().data.numpy()
         img_fake = ((np.transpose(fake_numpy, (0, 2, 3, 1)) + 1) / 2.0 * 255.0).astype(np.uint8)
         for i in range(self.real_A.size()[0]):
-            Image.fromarray(img_A[i]).save(self.out_dir + str(label) + '_source.jpg')
-            Image.fromarray(img_tgt[i]).save(self.out_dir + str(label) + '_source.jpg')
+            Image.fromarray(img_A[i]).save(self.out_dir + str(label) + '_' + str(i) + '_source.jpg')
+            Image.fromarray(img_tgt[i]).save(self.out_dir + str(label) + '_'+ str(i) + '_tgt.jpg')
             if 'EFG' in self.model:
                 if self.expres_code == 0:
                     Image.fromarray(img_fake[i]).save(self.out_dir + str(label) + '_' + str(i) + '_fake_smile.jpg')
