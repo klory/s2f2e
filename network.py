@@ -48,7 +48,7 @@ class NLayerDiscriminator(nn.Module):
         return self.model(x)
 
 class Unet_G(nn.Module):
-    def __init__(self, input_nc, output_nc, which_model, nfg=64, norm_layer=nn.BatchNorm2d, use_dropout=False, gpu_ids=[]):
+    def __init__(self, input_nc, output_nc, which_model, nfg=64, norm_layer=nn.BatchNorm2d, use_dropout=True, gpu_ids=[]):
         super(Unet_G, self).__init__()
         self.input_nc = input_nc
         self.output_nc = output_nc
@@ -63,8 +63,7 @@ class Unet_G(nn.Module):
 
         self.conv1 = nn.Sequential(nn.ReflectionPad2d(3),
                  nn.Conv2d(input_nc, nfg//2, kernel_size=7, padding=0, bias=use_bias),
-                 norm_layer(nfg//2),
-                 nn.ReLU(True))
+                 norm_layer(nfg//2), nn.Dropout(0.5))
         self.conv2 = ConvBlock(nfg//2, nfg, 3, 2, 1, norm_layer, use_dropout)
 
         self.conv3 = ConvBlock(nfg, nfg*2, 3, 2, 1, norm_layer, use_dropout)
@@ -74,14 +73,14 @@ class Unet_G(nn.Module):
         if which_model == 'EFG':
             self.conv4 = ConvBlock(nfg*2, nfg*4, 3, 2, 1, norm_layer, use_dropout, use_bias)
             self.conv5 = ConvBlock(nfg*4, nfg*8, 3, 2, 1, norm_layer, use_dropout, use_bias)
-            self.convTran1 = ConvTransBlock(nfg*8 + 3, nfg*4, norm_layer=nn.BatchNorm2d, use_dropout=False, first_layer=False, last_layer=False)
-            self.convTran2 = ConvTransBlock(nfg*4*2, nfg*2, norm_layer=nn.BatchNorm2d, use_dropout=False, first_layer=False, last_layer=False)
+            self.convTran1 = ConvTransBlock(nfg*8 + 3, nfg*4, norm_layer=nn.BatchNorm2d, use_dropout=use_dropout, first_layer=False, last_layer=False)
+            self.convTran2 = ConvTransBlock(nfg*4*2, nfg*2, norm_layer=nn.BatchNorm2d, use_dropout=use_dropout, first_layer=False, last_layer=False)
         self.res3 = ResnetBlock(nfg*2, padding_type, norm_layer, use_dropout, use_bias)
         self.res4 = ResnetBlock(nfg*2, padding_type, norm_layer, use_dropout, use_bias)
         self.res5 = ResnetBlock(nfg*2, padding_type, norm_layer, use_dropout, use_bias)
 
-        self.convTran3 = ConvTransBlock(nfg*2*2, nfg, norm_layer=nn.BatchNorm2d, use_dropout=False, first_layer=False, last_layer=False)
-        self.convTran4 = ConvTransBlock(nfg*2, nfg//2, norm_layer=nn.BatchNorm2d, use_dropout=False, first_layer=False, last_layer=False)
+        self.convTran3 = ConvTransBlock(nfg*2*2, nfg, norm_layer=nn.BatchNorm2d, use_dropout=use_dropout, first_layer=False, last_layer=False)
+        self.convTran4 = ConvTransBlock(nfg*2, nfg//2, norm_layer=nn.BatchNorm2d, use_dropout=use_dropout, first_layer=False, last_layer=False)
 
         self.conv6 = nn.Sequential(nn.ReflectionPad2d(3),
                  nn.Conv2d(nfg, 3, kernel_size=7, padding=0, bias=use_bias),
@@ -110,7 +109,7 @@ class Unet_G(nn.Module):
         return out_conv6
 
 class ConvBlock(nn.Module):
-    def __init__(self, input_nc, output_nc, k, s, p, norm_layer=nn.BatchNorm2d, use_dropout=False, first_layer=False, last_layer=False):
+    def __init__(self, input_nc, output_nc, k, s, p, norm_layer=nn.BatchNorm2d, use_dropout=True, first_layer=False, last_layer=False):
         super(ConvBlock, self).__init__()
         if type(norm_layer) == functools.partial:
             use_bias = norm_layer.func == nn.InstanceNorm2d
@@ -118,11 +117,13 @@ class ConvBlock(nn.Module):
             use_bias = norm_layer == nn.InstanceNorm2d
         model = []
         model = [nn.Conv2d(input_nc, output_nc, kernel_size=k, stride=s, padding=p, bias=use_bias)]
-        if not last_layer and not first_layer:
-            model += [norm_layer(output_nc)]
+        model += [norm_layer(output_nc)]
+        if not last_layer:
             model += [nn.LeakyReLU(0.2, True)]
-        if first_layer:
-            model += [nn.LeakyReLU(0.2, True)]
+        if use_dropout:
+            model += [nn.Dropout(0.5)]
+        if last_layer:
+            model += [nn.Tanh()]
         self.model = nn.Sequential(*model)
 
     def forward(self, x):
@@ -146,8 +147,7 @@ class ResnetBlock(nn.Module):
             raise NotImplementedError('padding [%s] is not implemented' % padding_type)
 
         conv_block += [nn.Conv2d(dim, dim, kernel_size=3, padding=p, bias=use_bias),
-                       norm_layer(dim),
-                       nn.ReLU(True)]
+                       norm_layer(dim)]
         if use_dropout:
             conv_block += [nn.Dropout(0.5)]
 
@@ -170,7 +170,7 @@ class ResnetBlock(nn.Module):
         return out
 
 class ConvTransBlock(nn.Module):
-    def __init__(self, input_nc, output_nc, norm_layer=nn.BatchNorm2d, use_dropout=False, first_layer=False, last_layer=False):
+    def __init__(self, input_nc, output_nc, norm_layer=nn.BatchNorm2d, use_dropout=True, first_layer=False, last_layer=False):
         super(ConvTransBlock, self).__init__()
         if type(norm_layer) == functools.partial:
             use_bias = norm_layer.func == nn.InstanceNorm2d
@@ -180,10 +180,9 @@ class ConvTransBlock(nn.Module):
         model = [nn.ConvTranspose2d(input_nc, output_nc, kernel_size=4, stride=2, padding=1, bias=use_bias)]
         if not last_layer:
             model += [norm_layer(output_nc)]
-            model += [nn.ReLU(True)]
             if use_dropout:
                 model += [nn.Dropout(0.5)]
-        if last_layer:
+        else:
             model += [nn.Tanh()]
         self.model = nn.Sequential(*model)
 

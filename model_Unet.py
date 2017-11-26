@@ -34,7 +34,7 @@ class Unet(BaseModel):
             raise ValueError("Only support nfg = 128 or 64. Got %d" % self.nfg)
         # configuration of network
         if opt.isTrain:
-            self.no_dropout = opt.no_dropout
+            self.dropout = opt.dropout
             self.use_sigmoid = False
             self.batch_size = opt.batch_size
             self.norm = functools.partial(nn.BatchNorm2d, affine=True)
@@ -54,7 +54,7 @@ class Unet(BaseModel):
 
         # intializer network
         self.net_D = NLayerDiscriminator(self.input_nc, norm_layer=self.norm, use_sigmoid=self.use_sigmoid)
-        self.net_G = Unet_G(self.input_nc, self.output_nc, self.which_model, nfg=self.nfg, norm_layer=self.norm)
+        self.net_G = Unet_G(self.input_nc, self.output_nc, self.which_model, nfg=self.nfg, norm_layer=self.norm, use_dropout=self.dropout)
         devices = self.opt.gpu_ids 
         if torch.cuda.device_count() > 1:
             self.net_G = nn.DataParallel(self.net_G, device_ids=devices)
