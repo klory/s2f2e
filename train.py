@@ -40,10 +40,50 @@ total_step = 0
 print('data_size: %d, scheduled_iter_num: %d' %(data_size, epoch_num*data_size))
 
 
+which_model = opt.model
 for e in range(epoch_num):
     for i, data in enumerate(data_loader):
         model.set_input(data)
-        model.optimize()
+        if 'LSGAN' in which_model:
+            model.optimize()
+        elif 'WGAN' in which_model:
+            model.forward()
+            if 'CYC' in which_model:
+                for _ in range(5):
+                    model.optimizer_D_A.zero_grad()
+                    model.backward_D_A()
+                    model.optimizer_D_A.step()
+
+                    if 'WGAN' in model.model:
+                        for p in model.net_D_A.parameters():
+                            p.data.clamp_(-0.01, 0.01)
+
+                    model.optimizer_D_B.zero_grad()
+                    model.backward_D_B()
+                    model.optimizer_D_B.step()
+
+                    if 'WGAN' in model.model:
+                        for p in model.net_D_B.parameters():
+                            p.data.clamp_(-0.01, 0.01)
+
+                model.optimizer_G.zero_grad()
+                model.backward_G()
+                model.optimizer_G.step()
+
+            else:
+                for _ in range(5):
+                    model.optimizer_D.zero_grad()
+                    model.backward_D()
+                    model.optimizer_D.step()
+
+                    for p in model.net_D.parameters():
+                        p.data.clamp_(-0.01, 0.01)
+
+                model.optimizer_G.zero_grad()
+                model.backward_G()
+                model.optimizer_G.step()
+        else:
+            raise ValueError('%s is not supported.' % which_model)
         model.save_loss()
 
         if total_step % opt.disp_freq == 0:

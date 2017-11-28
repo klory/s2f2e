@@ -36,7 +36,7 @@ class Cycle(BaseModel):
             raise ValueError("Only support nfg = 128 or 64. Got %d" % self.nfg)
         # configuration of NFG network
         if opt.isTrain:
-            self.no_dropout = opt.no_dropout
+            self.dropout = opt.dropout
             self.use_sigmoid = False
             self.norm = functools.partial(nn.BatchNorm2d, affine=True)
             self.lr = opt.learning_rate
@@ -54,8 +54,8 @@ class Cycle(BaseModel):
         if 'EFG' in self.model:
             self.expression_label = self.Tensor(opt.batch_size, 3, 8, 8)
         # build up network
-        self.net_G_AtoB = Unet_G(self.input_nc, self.output_nc, self.which_model, self.nfg, norm_layer=self.norm, use_dropout=not self.no_dropout)
-        self.net_G_BtoA = Unet_G(self.input_nc, self.output_nc, self.which_model, self.nfg, norm_layer=self.norm, use_dropout=not self.no_dropout)
+        self.net_G_AtoB = Unet_G(self.input_nc, self.output_nc, self.which_model, self.nfg, norm_layer=self.norm, use_dropout=self.dropout)
+        self.net_G_BtoA = Unet_G(self.input_nc, self.output_nc, self.which_model, self.nfg, norm_layer=self.norm, use_dropout=self.dropout)
 
         self.net_D_A = NLayerDiscriminator(self.input_nc, norm_layer=self.norm, use_sigmoid=self.use_sigmoid)
         self.net_D_B = NLayerDiscriminator(self.input_nc, norm_layer=self.norm, use_sigmoid=self.use_sigmoid)
@@ -148,7 +148,7 @@ class Cycle(BaseModel):
             fake_B = self.net_G_AtoB(self.real_A, self.real_label)
         # Note: this part is different from the original code. We follow paper "DY encouragesGtotranslateXintooutputsindistinguishablefromdomainY,andviceversa for DX and F"
         loss_D_A = self.backward_D(self.net_D_A, self.real_B, fake_B)
-        self.loss_D_A = loss_D_A.data[0]
+        self.loss_D_A = loss_D_A
 
     def backward_D_B(self):
         if 'NFG' in self.model:
@@ -156,7 +156,7 @@ class Cycle(BaseModel):
         else:
             fake_A = self.net_G_BtoA(self.real_B, self.real_label)
         loss_D_B = self.backward_D(self.net_D_B, self.real_A, fake_A)
-        self.loss_D_B = loss_D_B.data[0]
+        self.loss_D_B = loss_D_B
 
     def backward_G(self):
         if 'NFG' in self.model:
@@ -195,19 +195,15 @@ class Cycle(BaseModel):
         self.cyc_A = cyc_A
         self.cyc_B = cyc_B
 
-        self.loss_G_AGAN = loss_G_AGAN.data[0]
-        self.loss_G_BGAN = loss_G_BGAN.data[0]
-        self.loss_cyc_A = loss_cyc_A.data[0]
-        self.loss_cyc_B = loss_cyc_B.data[0]
-        #self.loss_idt_A = loss_idt_A.data[0]
-        #self.loss_idt_B = loss_idt_B.data[0]
+        self.loss_G_AGAN = loss_G_AGAN
+        self.loss_G_BGAN = loss_G_BGAN
+        self.loss_cyc_A = loss_cyc_A
+        self.loss_cyc_B = loss_cyc_B
+        #self.loss_idt_A = loss_idt_A
+        #self.loss_idt_B = loss_idt_B
 
     def optimize(self):
         self.forward()
-
-        self.optimizer_G.zero_grad()
-        self.backward_G()
-        self.optimizer_G.step()
 
         self.optimizer_D_A.zero_grad()
         self.backward_D_A()
@@ -221,18 +217,24 @@ class Cycle(BaseModel):
         self.backward_D_B()
         self.optimizer_D_B.step()
 
-        for p in self.net_D_B.parameters():
-            p.data.clamp_(-0.01, 0.01)
+        if 'WGAN' in self.model:
+            for p in self.net_D_B.parameters():
+                p.data.clamp_(-0.01, 0.01)
+
+        self.optimizer_G.zero_grad()
+        self.backward_G()
+        self.optimizer_G.step()
 
     def print_current_loss(self):
-        print("loss_D_A: %f\t loss_D_B: %f\t loss_G_A: %f\t loss_G_A: %f\t loss_cyc_A: %f\t loss_cyc_B: %f\t" % (self.loss_D_A, self.loss_D_B, self.loss_G_AGAN, self.loss_G_BGAN, self.loss_cyc_A, self.loss_cyc_B))
+        print("loss_D_A: %f\t loss_D_B: %f\t loss_G_A: %f\t loss_G_A: %f\t loss_cyc_A: %f\t loss_cyc_B: %f\t" % (self.loss_D_A.data[0], self.loss_D_B.data[0], self.loss_G_AGAN.data[0], self.loss_G_BGAN.data[0], self.loss_cyc_A.data[0], self.loss_cyc_B.data[0]))
+
     def save_loss(self):
-        self.loss_D_As.append(self.loss_D_A.cpu())
-        self.loss_D_Bs.append(self.loss_D_B.cpu())
-        self.loss_G_AGANs.append(self.loss_G_AGAN.cpu())
-        self.loss_G_BGANs.append(self.loss_G_BGAN.cpu())
-        self.loss_cyc_As.append(self.loss_cyc_A.cpu())
-        self.loss_cyc_Bs.append(self.loss_cyc_B.cpu())
+        self.loss_D_As.append(self.loss_D_A.cpu().data.numpy())
+        self.loss_D_Bs.append(self.loss_D_B.cpu().data.numpy())
+        self.loss_G_AGANs.append(self.loss_G_AGAN.cpu().data.numpy())
+        self.loss_G_BGANs.append(self.loss_G_BGAN.cpu().data.numpy())
+        self.loss_cyc_As.append(self.loss_cyc_A.cpu().data.numpy())
+        self.loss_cyc_Bs.append(self.loss_cyc_B.cpu().data.numpy())
 
     def save(self, label):
         # save network
