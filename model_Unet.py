@@ -201,10 +201,6 @@ class Unet(BaseModel):
         self.backward_D()
         self.optimizer_D.step()
 
-        if 'WGAN' in self.model:
-            for p in self.net_D.parameters():
-                p.data.clamp_(-0.01, 0.01)
-
         self.optimizer_G.zero_grad()
         self.backward_G()
         self.optimizer_G.step()
@@ -235,13 +231,6 @@ class Unet(BaseModel):
                     Image.fromarray(img_fake[i]).save(self.out_dir + str(label) + '_' + str(i) + '_fake_scream.jpg')
             else:
                 Image.fromarray(img_fake[i]).save(self.out_dir + str(label) + '_' + str(i) + '_fake_tgt.jpg')
-                """
-                print('mean: ', np.mean(img_fake[i][0]), np.mean(img_fake[i][1]), np.mean(img_fake[i][2]))
-                print('min: ', np.min(img_fake[i][0]), np.min(img_fake[i][1]), np.min(img_fake[i][2]))
-                print('max', np.max(img_fake[i][0]), np.max(img_fake[i][1]), np.max(img_fake[i][2]))
-                print('std', np.std(img_fake[i][0]), np.std(img_fake[i][1]), np.std(img_fake[i][2]))
-                raw_input("Press Enter to continue...")
-                """
         # save loss plt
         length = len(self.loss_D_reals)
         x = np.arange(length)

@@ -50,17 +50,9 @@ for e in range(epoch_num):
                     model.backward_D_A()
                     model.optimizer_D_A.step()
 
-                    if 'WGAN' in model.model:
-                        for p in model.net_D_A.parameters():
-                            p.data.clamp_(-0.01, 0.01)
-
                     model.optimizer_D_B.zero_grad()
                     model.backward_D_B()
                     model.optimizer_D_B.step()
-
-                    if 'WGAN' in model.model:
-                        for p in model.net_D_B.parameters():
-                            p.data.clamp_(-0.01, 0.01)
 
                 model.optimizer_G.zero_grad()
                 model.backward_G()
@@ -71,9 +63,6 @@ for e in range(epoch_num):
                     model.optimizer_D.zero_grad()
                     model.backward_D()
                     model.optimizer_D.step()
-
-                    for p in model.net_D.parameters():
-                        p.data.clamp_(-0.01, 0.01)
 
                 model.optimizer_G.zero_grad()
                 model.backward_G()
