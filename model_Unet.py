@@ -52,17 +52,18 @@ class Unet(BaseModel):
         self.input_A = self.Tensor(opt.batch_size, opt.input_nc, opt.img_size, opt.img_size)
         self.input_tgt = self.Tensor(opt.batch_size, opt.input_nc, opt.img_size, opt.img_size)
 
-        if torch.cuda.is_available:
-            self.express_code = torch.cuda.LongTensor(opt.batch_size, 2, 2, 3)
+        if torch.cuda.is_available():
+            self.expression_label = torch.cuda.LongTensor(opt.batch_size, 1)
         else:
-            self.express_code = self.Tensor(opt.batch_size, 2, 2, 3)
+            self.expression_label = torch.LongTensor(opt.batch_size, 1)
 
         if 'EFG' in self.model:
-            self.expression_label = self.Tensor(opt.batch_size, 2, 2, 3)
+            self.expression_code = self.Tensor(opt.batch_size, 2, 2, 3)
 
         # intializer network
         self.net_D = NLayerDiscriminator(self.input_nc, self.batch_size, norm_layer=self.norm, use_sigmoid=self.use_sigmoid)
         self.net_G = Unet_G2(self.input_nc, self.output_nc, self.which_model, nfg=self.nfg, norm_layer=self.norm, use_dropout=self.dropout)
+
         devices = self.opt.gpu_ids 
         if torch.cuda.device_count() > 1:
             self.net_G = nn.DataParallel(self.net_G, device_ids=devices)
@@ -106,38 +107,35 @@ class Unet(BaseModel):
         elif 'EFG' in self.model:
             input_A = input[0]['source']
             input_tgt = input[0]['target']
-            label = self.label_generate(input[1][0], input_A.size(0))
-            self.exp_code = input[1]
+            code = self.code_generate(input[1][0], input_A.size(0))
+            self.exp_label = input[1]
         else:
             raise ValueError("%s is not suppported." % self.model)
         self.input_A.resize_(input_A.size()).copy_(input_A)
         self.input_tgt.resize_(input_tgt.size()).copy_(input_tgt)
         if 'EFG' in self.model:
-            self.expression_label.resize_(label.size()).copy_(label)
-            self.express_code.resize_(self.exp_code.size()).copy_(self.exp_code)
+            self.expression_code.resize_(code.size()).copy_(code)
+            self.expression_label.resize_(self.exp_label.size()).copy_(self.exp_label)
 
     def forward(self):
         self.real_A = Variable(self.input_A)
         self.real_tgt = Variable(self.input_tgt)
         if 'EFG' in self.model:
-            self.real_label = Variable(self.expression_label)
-            self.fake_tgt = self.net_G(self.real_A, self.real_label)
+            self.real_code = Variable(self.expression_code)
+            self.fake_tgt = self.net_G(self.real_A, self.real_code)
         else:
             self.fake_tgt = self.net_G(self.real_A, None)
 
     def backward_D(self):
-        exp_code = Variable(self.express_code)
-        out_D_real = self.net_D(self.real_tgt)
-        out_D_fake = self.net_D(self.fake_tgt)
+        exp_label = Variable(self.expression_label)
+        v_real, s_real = self.net_D(self.real_tgt)
+        v_fake, s_fake = self.net_D(self.fake_tgt)
 
-        D_real = out_D_real[:,0]
-        D_fake = out_D_fake[:,0]
+        self.loss_D_real = -torch.mean(s_real)
+        self.loss_D_fake = torch.mean(s_fake)
 
-        self.loss_D_real = -torch.mean(D_real)
-        self.loss_D_fake = torch.mean(D_fake)
-
-        self.loss_D_entro_real = self.criterionCrossEnt(out_D_real[:,1:], exp_code)
-        self.loss_D_entro_fake = self.criterionCrossEnt(out_D_fake[:,1:], exp_code)
+        self.loss_D_entro_real = self.criterionCrossEnt(v_real, exp_label)
+        self.loss_D_entro_fake = self.criterionCrossEnt(v_fake, exp_label)
 
         self.loss_D = self.loss_D_real + self.loss_D_fake + self.loss_D_entro_real+ self.loss_D_entro_fake
 
@@ -159,13 +157,13 @@ class Unet(BaseModel):
         self.loss_D.backward(retain_graph=True)
 
     def backward_G(self):
-        D_fake = self.net_D(self.fake_tgt)
-        D_real = self.net_D(self.real_tgt)
+        v_D_fake, _ = self.net_D(self.fake_tgt)
+        v_D_real, _ = self.net_D(self.real_tgt)
         self.loss_G_L1 = self.criterionL1(self.fake_tgt, self.real_tgt)
         if 'WGAN' in self.model:
-            self.loss_G_GAN = -torch.mean(D_fake)
+            self.loss_G_GAN = -torch.mean(v_D_fake)
         else:
-            self.loss_G_GAN = self.criterionGAN(D_fake, Variable(self.Tensor(D_real.size()).fill_(1.0), requires_grad=False))
+            self.loss_G_GAN = self.criterionGAN(v_D_fake, Variable(self.Tensor(v_D_real.size()).fill_(1.0), requires_grad=False))
 
         self.loss_G = self.loss_G_GAN + self.loss_G_L1 * self.lam_l1
         #self.loss_G = self.loss_G_L1 * self.lam_l1
@@ -204,9 +202,9 @@ class Unet(BaseModel):
             Image.fromarray(img_A[i]).save(self.out_dir + str(label) + '_' + str(i) + '_source.jpg')
             Image.fromarray(img_tgt[i]).save(self.out_dir + str(label) + '_'+ str(i) + '_tgt.jpg')
             if 'EFG' in self.model:
-                if self.express_code[0] == 0:
+                if self.expression_label[0] == 0:
                     Image.fromarray(img_fake[i]).save(self.out_dir + str(label) + '_' + str(i) + '_fake_smile.jpg')
-                elif self.express_code[0] == 1:
+                elif self.expression_label[0] == 1:
                     Image.fromarray(img_fake[i]).save(self.out_dir + str(label) + '_' + str(i) + '_fake_anger.jpg')
                 else:
                     Image.fromarray(img_fake[i]).save(self.out_dir + str(label) + '_' + str(i) + '_fake_scream.jpg')

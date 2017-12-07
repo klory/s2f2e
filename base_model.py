@@ -36,7 +36,7 @@ class BaseModel():
     def get_loss(self):
         pass
 
-    def label_generate(self, label, batch_size):
+    def code_generate(self, label, batch_size):
         v1 = np.array([1] * 2 * 2).reshape(1, 1, 2, 2)
         v0 = np.array([0] * 2 * 2).reshape(1, 1, 2, 2)
         if label == 0:

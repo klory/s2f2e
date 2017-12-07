@@ -44,11 +44,15 @@ class NLayerDiscriminator(nn.Module):
             sequence += [nn.Sigmoid()]
 
         self.model = nn.Sequential(*sequence)
+        self.fc_v = nn.Linear(4, 3)
+        self.fc_s = nn.Linear(4, 1)
 
     def forward(self, x):
         out = self.model(x)
         out = out.view(self.batch_size, -1)
-        return out
+        v = self.fc_v(out)
+        s = self.fc_s(out)
+        return v, s
 
 class Unet_G1(nn.Module):
     """
