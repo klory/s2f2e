@@ -8,28 +8,25 @@ opt = Option()()
 model = create_model(opt)
 batch_size = opt.batch_size
 is_small = opt.is_small
+raw_input("Press Enter to continue...")
 
 if 'EFG' in opt.model:
     if 'CYC' in opt.model:
         transformed_dataset = EFGDataset(mode='training', transform=transforms.Compose(
-            [AugmentImage(),
-            ToTensor(),
+            [ToTensor(),
             Normalize([0.5,0.5,0.5],[0.5,0.5,0.5])]), is_unpaired=True, is_small=is_small)
     else:
         transformed_dataset = EFGDataset(mode='training', transform=transforms.Compose(
-            [AugmentImage(),
-            ToTensor(),
+            [ToTensor(),
             Normalize([0.5,0.5,0.5],[0.5,0.5,0.5])]), is_unpaired=True, is_small=is_small)
 elif 'NFG' in opt.model:
     if 'CYC' in opt.model:
         transformed_dataset = NFGDataset(mode='training',transform=transforms.Compose(
-            [AugmentImage(),
-                ToTensor(),
+            [ToTensor(),
                 Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])]), is_small=is_small)
     else:
         transformed_dataset = NFGDataset(mode='training',transform=transforms.Compose(
-            [AugmentImage(),
-                ToTensor(),
+            [ToTensor(),
                 Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])]), is_small=is_small)
 
 data_loader = torch.utils.data.DataLoader(transformed_dataset, batch_size=batch_size, shuffle=False)

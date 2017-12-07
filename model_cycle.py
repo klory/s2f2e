@@ -39,7 +39,8 @@ class Cycle(BaseModel):
             self.dropout = opt.dropout
             self.use_sigmoid = False
             self.norm = functools.partial(nn.BatchNorm2d, affine=True)
-            self.lr = opt.learning_rate
+            self.lr_adam = opt.learning_rate_adam
+            self.lr_rmsprop = opt.learning_rate_rmsprop
             self.lam_cyc = opt.lam_cyc
             self.lam_l1 = opt.lam_l1
             self.lam_idt = opt.lam_idt
@@ -54,8 +55,8 @@ class Cycle(BaseModel):
         if 'EFG' in self.model:
             self.expression_label = self.Tensor(opt.batch_size, 3, 8, 8)
         # build up network
-        self.net_G_AtoB = Unet_G(self.input_nc, self.output_nc, self.which_model, self.nfg, norm_layer=self.norm, use_dropout=self.dropout)
-        self.net_G_BtoA = Unet_G(self.input_nc, self.output_nc, self.which_model, self.nfg, norm_layer=self.norm, use_dropout=self.dropout)
+        self.net_G_AtoB = Unet_G2(self.input_nc, self.output_nc, self.which_model, self.nfg, norm_layer=self.norm, use_dropout=self.dropout)
+        self.net_G_BtoA = Unet_G2(self.input_nc, self.output_nc, self.which_model, self.nfg, norm_layer=self.norm, use_dropout=self.dropout)
 
         self.net_D_A = NLayerDiscriminator(self.input_nc, norm_layer=self.norm, use_sigmoid=self.use_sigmoid)
         self.net_D_B = NLayerDiscriminator(self.input_nc, norm_layer=self.norm, use_sigmoid=self.use_sigmoid)
@@ -73,13 +74,13 @@ class Cycle(BaseModel):
             self.net_D_B.cuda()
         # set up optimizer
         if 'LSGAN' in self.model:
-            self.optimizer_G = torch.optim.Adam(list(self.net_G_AtoB.parameters()) + list(self.net_G_BtoA.parameters()), lr=self.lr, betas=(self.beta1, self.beta2))
-            self.optimizer_D_A = torch.optim.Adam(self.net_D_A.parameters(), lr=self.lr, betas=(self.beta1, self.beta2))
-            self.optimizer_D_B = torch.optim.Adam(self.net_D_B.parameters(), lr=self.lr, betas=(self.beta1, self.beta2))
+            self.optimizer_G = torch.optim.Adam(list(self.net_G_AtoB.parameters()) + list(self.net_G_BtoA.parameters()), lr=self.lr_adam, betas=(self.beta1, self.beta2))
+            self.optimizer_D_A = torch.optim.Adam(self.net_D_A.parameters(), lr=self.lr_adam, betas=(self.beta1, self.beta2))
+            self.optimizer_D_B = torch.optim.Adam(self.net_D_B.parameters(), lr=self.lr_adam, betas=(self.beta1, self.beta2))
         elif 'WGAN' in self.model:
-            self.optimizer_G = torch.optim.RMSprop(list(self.net_G_AtoB.parameters()) + list(self.net_G_BtoA.parameters()), lr=self.lr)
-            self.optimizer_D_A = torch.optim.RMSprop(self.net_D_A.parameters(), lr=self.lr)
-            self.optimizer_D_B = torch.optim.RMSprop(self.net_D_B.parameters(), lr=self.lr)
+            self.optimizer_G = torch.optim.RMSprop(list(self.net_G_AtoB.parameters()) + list(self.net_G_BtoA.parameters()), lr=self.lr_rmsprop)
+            self.optimizer_D_A = torch.optim.RMSprop(self.net_D_A.parameters(), lr=self.lr_rmsprop)
+            self.optimizer_D_B = torch.optim.RMSprop(self.net_D_B.parameters(), lr=self.lr_rmsprop)
         else:
             raise ValueError('%s is not supported.' % self.model)
         # save generated images
@@ -134,9 +135,9 @@ class Cycle(BaseModel):
 
             self.loss_D = (self.loss_D_real + self.loss_D_fake) * 0.5
         else:
-            self.loss_D_real = torch.mean(D_real)
+            self.loss_D_real = -torch.mean(D_real)
             self.loss_D_fake = torch.mean(D_fake)
-            self.loss_D = -(self.loss_D_real -self.loss_D_fake)
+            self.loss_D = self.loss_D_real + self.loss_D_fake
 
         self.loss_D.backward()
         return self.loss_D
@@ -226,7 +227,7 @@ class Cycle(BaseModel):
         self.optimizer_G.step()
 
     def print_current_loss(self):
-        print("loss_D_A: %f\t loss_D_B: %f\t loss_G_A: %f\t loss_G_A: %f\t loss_cyc_A: %f\t loss_cyc_B: %f\t" % (self.loss_D_A.data[0], self.loss_D_B.data[0], self.loss_G_AGAN.data[0], self.loss_G_BGAN.data[0], self.loss_cyc_A.data[0], self.loss_cyc_B.data[0]))
+        print("loss_D_A: %f\t loss_D_B: %f\t loss_G_A: %f\t loss_G_B: %f\t loss_cyc_A: %f\t loss_cyc_B: %f\t" % (self.loss_D_A.data[0], self.loss_D_B.data[0], self.loss_G_AGAN.data[0], self.loss_G_BGAN.data[0], self.loss_cyc_A.data[0], self.loss_cyc_B.data[0]))
 
     def save_loss(self):
         self.loss_D_As.append(self.loss_D_A.cpu().data.numpy())
@@ -238,10 +239,10 @@ class Cycle(BaseModel):
 
     def save(self, label):
         # save network
-        self.save_network(self.net_G_AtoB, 'G_Ato_B', label)
-        self.save_network(self.net_G_BtoA, 'G_Bto_A', label)
-        self.save_network(self.net_D_A, 'D_A', label)
-        self.save_network(self.net_D_B, 'D_B', label)
+        #self.save_network(self.net_G_AtoB, 'G_Ato_B', label)
+        #self.save_network(self.net_G_BtoA, 'G_Bto_A', label)
+        #self.save_network(self.net_D_A, 'D_A', label)
+        #self.save_network(self.net_D_B, 'D_B', label)
 
         # save generated images
         img_A = ((np.transpose(self.real_A.cpu().data.numpy(), (0, 2, 3, 1)) + 1) / 2.0 * 255.0).astype(np.uint8)
@@ -255,24 +256,24 @@ class Cycle(BaseModel):
         A_cyc = ((np.transpose(cyc_A_numpy, (0, 2, 3, 1)) + 1) / 2.0 * 255.0).astype(np.uint8)
         B_cyc = ((np.transpose(cyc_B_numpy, (0, 2, 3, 1)) + 1) / 2.0 * 255.0).astype(np.uint8)
         for i in range(self.real_A.size()[0]):
-            Image.fromarray(img_A[i]).save(self.out_dir + str(label) + '_' + str(i) + 'source.jpg')
-            Image.fromarray(img_tgt[i]).save(self.out_dir + str(label) + '_' + str(i) + 'source.jpg')
+            Image.fromarray(img_A[i]).save(self.out_dir + str(label) + '_' + str(i) + '_source.jpg')
+            Image.fromarray(img_tgt[i]).save(self.out_dir + str(label) + '_' + str(i) + '_tgt.jpg')
             if 'EFG' in self.model:
                 if self.expres_code == 0:
-                    Image.fromarray(A_fake[i]).save(self.out_dir + str(label) + '_' + str(i) + 'fake_smile.jpg')
-                    Image.fromarray(B_fake[i]).save(self.out_dir + str(label) + '_' + str(i) + 'fake_smile.jpg')
-                    Image.fromarray(A_cyc[i]).save(self.out_dir + str(label) + '_' + str(i) + 'cyc_smile.jpg')
-                    Image.fromarray(B_cyc[i]).save(self.out_dir + str(label) + '_' + str(i) + 'cyc_smile.jpg')
+                    Image.fromarray(A_fake[i]).save(self.out_dir + str(label) + '_' + str(i) + '_fake_A_smile.jpg')
+                    Image.fromarray(B_fake[i]).save(self.out_dir + str(label) + '_' + str(i) + '_fake_B_smile.jpg')
+                    Image.fromarray(A_cyc[i]).save(self.out_dir + str(label) + '_' + str(i) + '_cyc_A_smile.jpg')
+                    Image.fromarray(B_cyc[i]).save(self.out_dir + str(label) + '_' + str(i) + '_cyc_B_smile.jpg')
                 elif self.expres_code == 1:
-                    Image.fromarray(A_fake[i]).save(self.out_dir + str(label) + '_' + str(i) + 'fake_smile.jpg')
-                    Image.fromarray(B_fake[i]).save(self.out_dir + str(label) + '_' + str(i) + 'fake_smile.jpg')
-                    Image.fromarray(A_cyc[i]).save(self.out_dir + str(label) + '_' + str(i) + 'cyc_smile.jpg')
-                    Image.fromarray(B_cyc[i]).save(self.out_dir + str(label) + '_' + str(i) + 'cyc_smile.jpg')
+                    Image.fromarray(A_fake[i]).save(self.out_dir + str(label) + '_' + str(i) + '_fake_A_smile.jpg')
+                    Image.fromarray(B_fake[i]).save(self.out_dir + str(label) + '_' + str(i) + '_fake_B_smile.jpg')
+                    Image.fromarray(A_cyc[i]).save(self.out_dir + str(label) + '_' + str(i) + '_cyc_A_smile.jpg')
+                    Image.fromarray(B_cyc[i]).save(self.out_dir + str(label) + '_' + str(i) + '_cyc_B_smile.jpg')
                 else:
-                    Image.fromarray(A_fake[i]).save(self.out_dir + str(label) + '_' + str(i) + 'fake_smile.jpg')
-                    Image.fromarray(B_fake[i]).save(self.out_dir + str(label) + '_' + str(i) + 'fake_smile.jpg')
-                    Image.fromarray(A_cyc[i]).save(self.out_dir + str(label) + '_' + str(i) + 'cyc_smile.jpg')
-                    Image.fromarray(B_cyc[i]).save(self.out_dir + str(label) + '_' + str(i) + 'cyc_smile.jpg')
+                    Image.fromarray(A_fake[i]).save(self.out_dir + str(label) + '_' + str(i) + '_fake_A_smile.jpg')
+                    Image.fromarray(B_fake[i]).save(self.out_dir + str(label) + '_' + str(i) + '_fake_B_smile.jpg')
+                    Image.fromarray(A_cyc[i]).save(self.out_dir + str(label) + '_' + str(i) + '_cyc_A_smile.jpg')
+                    Image.fromarray(B_cyc[i]).save(self.out_dir + str(label) + '_' + str(i) + '_cyc_B_smile.jpg')
 
         # save loss plt
         length = len(self.loss_D_As)
@@ -284,5 +285,5 @@ class Cycle(BaseModel):
         for i in range(6):
             plt.plot(z[i][0], z[i][1], label=labels[i])
         plt.legend()
-        plt.savefig(self.out_loss + str(label) + 'loss.jpg')
+        plt.savefig(self.out_loss + 'loss.jpg')
         plt.close()
