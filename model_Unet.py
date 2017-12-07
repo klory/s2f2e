@@ -152,7 +152,7 @@ class Unet(BaseModel):
         x_rand = Variable(eps * self.real_tgt.data + (1-eps) * self.fake_tgt.data, requires_grad=True)
         loss_x_rand = self.net_D(x_rand)[1]
         grad_outputs = torch.ones(loss_x_rand.size())
-        grads = autograd.grad(loss_x_rand, x_rand, grad_outputs=grad_outputs.cude if torch.cuda.is_available() else grad_outputs, create_graph=True)[0]
+        grads = autograd.grad(loss_x_rand, x_rand, grad_outputs=grad_outputs.cuda() if torch.cuda.is_available() else grad_outputs, create_graph=True)[0]
         self.loss_gp = torch.mean((grads.view(-1, 3*128*128).pow(2).sum(1).sqrt() - 1).pow(2))
 
         exp_label = Variable(self.expression_label)
