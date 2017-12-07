@@ -74,7 +74,7 @@ class Unet(BaseModel):
         self.net_G.apply(self.init_weights)
 
         devices = self.opt.gpu_ids 
-        if length(devices) > 1:
+        if len(devices) > 1:
             self.net_G = nn.DataParallel(self.net_G, device_ids=devices)
             self.net_D = nn.DataParallel(self.net_D, device_ids=devices)
         if torch.cuda.is_available():
