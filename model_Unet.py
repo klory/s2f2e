@@ -11,6 +11,8 @@ from PIL import Image
 from load_data import *
 from base_model import *
 import matplotlib.pyplot as plt
+import random
+import torch.autograd as autograd
 
 class Unet(BaseModel):
     def initialize(self, opt):
@@ -38,12 +40,17 @@ class Unet(BaseModel):
             self.use_sigmoid = False
             self.batch_size = opt.batch_size
             self.norm = functools.partial(nn.BatchNorm2d, affine=True)
-            self.lr_adam = opt.learning_rate_adam
-            self.lr_rmsprop = opt.learning_rate_rmsprop
+            self.lr_ls = opt.learning_rate_ls
+            self.lr_wgan = opt.learning_rate_wgan
+
             self.lam_cyc = opt.lam_cyc
             self.lam_l1 = opt.lam_l1
-            self.beta1 = opt.beta1
-            self.beta2 = opt.beta2
+            self.lam_gp = opt.lam_gp
+
+            self.beta1_ls = opt.beta1_ls
+            self.beta2_ls = opt.beta2_ls
+            self.beta1_wgan = opt.beta1_wgan
+            self.beta2_wgan = opt.beta2_wgan
             self.criterionGAN = nn.MSELoss()
             self.criterionL1 = nn.L1Loss()
             self.criterionCrossEnt = nn.CrossEntropyLoss()
@@ -62,7 +69,9 @@ class Unet(BaseModel):
 
         # intializer network
         self.net_D = NLayerDiscriminator(self.input_nc, self.batch_size, norm_layer=self.norm, use_sigmoid=self.use_sigmoid)
+        self.net_D.apply(self.init_weights)
         self.net_G = Unet_G2(self.input_nc, self.output_nc, self.which_model, nfg=self.nfg, norm_layer=self.norm, use_dropout=self.dropout)
+        self.net_G.apply(self.init_weights)
 
         devices = self.opt.gpu_ids 
         if torch.cuda.device_count() > 1:
@@ -75,11 +84,11 @@ class Unet(BaseModel):
 
         # setup optimizer
         if 'LSGAN' in self.model:
-            self.optimizer_G = torch.optim.Adam(self.net_G.parameters(), lr=self.lr_adam, betas=(self.beta1, self.beta2))
-            self.optimizer_D = torch.optim.Adam(self.net_D.parameters(), lr=self.lr_adam, betas=(self.beta1, self.beta2))
+            self.optimizer_G = torch.optim.Adam(self.net_G.parameters(), lr=self.lr_ls, betas=(self.beta1_ls, self.beta2_ls))
+            self.optimizer_D = torch.optim.Adam(self.net_D.parameters(), lr=self.lr_ls, betas=(self.beta1_ls, self.beta2_ls))
         elif 'WGAN' in self.model:
-            self.optimizer_G = torch.optim.RMSprop(self.net_G.parameters(), lr=self.lr_rmsprop)
-            self.optimizer_D = torch.optim.RMSprop(self.net_D.parameters(), lr=self.lr_rmsprop)
+            self.optimizer_G = torch.optim.Adam(self.net_G.parameters(), lr=self.lr_wgan, betas=(self.beta1_wgan, self.beta2_wgan))
+            self.optimizer_D = torch.optim.Adam(self.net_D.parameters(), lr=self.lr_wgan, betas=(self.beta1_wgan, self.beta2_wgan))
 
         # initialize loss lists
         self.loss_G_GANs = []
@@ -97,8 +106,19 @@ class Unet(BaseModel):
             os.makedirs(self.out_loss)
 
         print("initializing completed:\n model name: %s\n input_nc: %s\n use_sigmoid: %s\n" % (self.model, self.input_nc, self.use_sigmoid))
-        print(self.net_G)
-        print(self.net_D)
+
+    def init_weights(self, m):
+        classname = m.__class__.__name__
+        if classname.find('Conv2d') != -1:
+            m.weight.data.normal_(0.0, 0.02)
+        if classname.find('ConvTranspose') != -1:
+            m.weight.data.normal_(0.0, 0.02)
+        if classname.find('Linear') != -1:
+            m.weight.data.normal_(0.0, 0.02)
+            m.bias.data.fill_(0.0)
+        if classname.find('BatchNorm') != -1:
+            m.weight.data.normal_(1.0, 0.02)
+            m.bias.data.fill_(0.0)
 
     def set_input(self, input):
         if 'NFG' in self.model:
@@ -127,6 +147,14 @@ class Unet(BaseModel):
             self.fake_tgt = self.net_G(self.real_A, None)
 
     def backward_D(self):
+        # using AC-GAN and gp-WGAN
+        eps = random.uniform(0, 1)
+        x_rand = Variable(eps * self.real_tgt.data + (1-eps) * self.fake_tgt.data, requires_grad=True)
+        loss_x_rand = self.net_D(x_rand)[1]
+        grad_outputs = torch.ones(loss_x_rand.size())
+        grads = autograd.grad(loss_x_rand, x_rand, grad_outputs=grad_outputs.cude if torch.cuda.is_available() else grad_outputs, create_graph=True)[0]
+        self.loss_gp = torch.mean((grads.view(-1, 3*128*128).pow(2).sum(1).sqrt() - 1).pow(2))
+
         exp_label = Variable(self.expression_label)
         v_real, s_real = self.net_D(self.real_tgt)
         v_fake, s_fake = self.net_D(self.fake_tgt)
@@ -135,13 +163,10 @@ class Unet(BaseModel):
         self.loss_D_fake = torch.mean(s_fake)
 
         self.loss_D_entro_real = self.criterionCrossEnt(v_real, exp_label)
-        self.loss_D_entro_fake = self.criterionCrossEnt(v_fake, exp_label)
+        #self.loss_D_entro_fake = self.criterionCrossEnt(v_fake, exp_label)
 
-        self.loss_D = self.loss_D_real + self.loss_D_fake + self.loss_D_entro_real+ self.loss_D_entro_fake
-
+        self.loss_D = self.loss_D_real + self.loss_D_fake + self.loss_D_entro_real + self.lam_gp * self.loss_gp
         
-
-        # using AC-GAN
 
         """
         if 'WGAN' in self.model:
