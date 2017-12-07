@@ -51,6 +51,12 @@ class Unet(BaseModel):
         # setup input
         self.input_A = self.Tensor(opt.batch_size, opt.input_nc, opt.img_size, opt.img_size)
         self.input_tgt = self.Tensor(opt.batch_size, opt.input_nc, opt.img_size, opt.img_size)
+
+        if torch.cuda.is_available:
+            self.express_code = torch.cuda.LongTensor(opt.batch_size, 2, 2, 3)
+        else:
+            self.express_code = self.Tensor(opt.batch_size, 2, 2, 3)
+
         if 'EFG' in self.model:
             self.expression_label = self.Tensor(opt.batch_size, 2, 2, 3)
 
@@ -101,13 +107,14 @@ class Unet(BaseModel):
             input_A = input[0]['source']
             input_tgt = input[0]['target']
             label = self.label_generate(input[1][0], input_A.size(0))
-            self.expres_code = input[1]
+            self.exp_code = input[1]
         else:
             raise ValueError("%s is not suppported." % self.model)
         self.input_A.resize_(input_A.size()).copy_(input_A)
         self.input_tgt.resize_(input_tgt.size()).copy_(input_tgt)
         if 'EFG' in self.model:
             self.expression_label.resize_(label.size()).copy_(label)
+            self.express_code.resize_(self.exp_code.size()).copy_(self.exp_code)
 
     def forward(self):
         self.real_A = Variable(self.input_A)
@@ -119,8 +126,7 @@ class Unet(BaseModel):
             self.fake_tgt = self.net_G(self.real_A, None)
 
     def backward_D(self):
-        expres_code = Variable(self.expres_code)
-
+        exp_code = Variable(self.express_code)
         out_D_real = self.net_D(self.real_tgt)
         out_D_fake = self.net_D(self.fake_tgt)
 
@@ -130,8 +136,8 @@ class Unet(BaseModel):
         self.loss_D_real = -torch.mean(D_real)
         self.loss_D_fake = torch.mean(D_fake)
 
-        self.loss_D_entro_real = self.criterionCrossEnt(out_D_real[:,1:], expres_code)
-        self.loss_D_entro_fake = self.criterionCrossEnt(out_D_fake[:,1:], expres_code)
+        self.loss_D_entro_real = self.criterionCrossEnt(out_D_real[:,1:], exp_code)
+        self.loss_D_entro_fake = self.criterionCrossEnt(out_D_fake[:,1:], exp_code)
 
         self.loss_D = self.loss_D_real + self.loss_D_fake + self.loss_D_entro_real+ self.loss_D_entro_fake
 
@@ -198,9 +204,9 @@ class Unet(BaseModel):
             Image.fromarray(img_A[i]).save(self.out_dir + str(label) + '_' + str(i) + '_source.jpg')
             Image.fromarray(img_tgt[i]).save(self.out_dir + str(label) + '_'+ str(i) + '_tgt.jpg')
             if 'EFG' in self.model:
-                if self.expres_code[0] == 0:
+                if self.express_code[0] == 0:
                     Image.fromarray(img_fake[i]).save(self.out_dir + str(label) + '_' + str(i) + '_fake_smile.jpg')
-                elif self.expres_code[0] == 1:
+                elif self.express_code[0] == 1:
                     Image.fromarray(img_fake[i]).save(self.out_dir + str(label) + '_' + str(i) + '_fake_anger.jpg')
                 else:
                     Image.fromarray(img_fake[i]).save(self.out_dir + str(label) + '_' + str(i) + '_fake_scream.jpg')

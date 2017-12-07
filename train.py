@@ -8,7 +8,6 @@ opt = Option()()
 model = create_model(opt)
 batch_size = opt.batch_size
 is_small = opt.is_small
-raw_input("Press Enter to continue...")
 
 if 'EFG' in opt.model:
     if 'CYC' in opt.model:
