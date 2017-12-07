@@ -7,4 +7,5 @@ mytest.py
 *.pth
 *.py~
 test.py
+test1.py
 out_small/
