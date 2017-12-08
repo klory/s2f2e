@@ -39,7 +39,7 @@ class Unet(BaseModel):
             self.dropout = opt.dropout
             self.use_sigmoid = False
             self.batch_size = opt.batch_size
-            self.norm = functools.partial(nn.BatchNorm2d, affine=True)
+            self.norm = functools.partial(nn.InstanceNorm2d, affine=True)
             self.lr_ls = opt.learning_rate_ls
             self.lr_wgan = opt.learning_rate_wgan
 
@@ -70,7 +70,7 @@ class Unet(BaseModel):
         # intializer network
         self.net_D = NLayerDiscriminator(self.input_nc, self.batch_size, norm_layer=self.norm, use_sigmoid=self.use_sigmoid)
         self.net_D.apply(self.init_weights)
-        self.net_G = Unet_G2(self.input_nc, self.output_nc, self.which_model, nfg=self.nfg, norm_layer=self.norm, use_dropout=self.dropout)
+        self.net_G = Unet_G1(self.input_nc, self.output_nc, self.which_model, nfg=self.nfg, norm_layer=self.norm, use_dropout=self.dropout)
         self.net_G.apply(self.init_weights)
 
         devices = self.opt.gpu_ids 
@@ -90,7 +90,7 @@ class Unet(BaseModel):
             self.optimizer_G = torch.optim.Adam(self.net_G.parameters(), lr=self.lr_wgan, betas=(self.beta1_wgan, self.beta2_wgan))
             self.optimizer_D = torch.optim.Adam(self.net_D.parameters(), lr=self.lr_wgan, betas=(self.beta1_wgan, self.beta2_wgan))
 
-        # initialize loss lists
+        # initialize loss lists for later printing
         self.loss_G_GANs = []
         self.loss_G_L1s = []
         self.loss_D_reals = []
@@ -117,6 +117,9 @@ class Unet(BaseModel):
             m.weight.data.normal_(0.0, 0.02)
             m.bias.data.fill_(0.0)
         if classname.find('BatchNorm') != -1:
+            m.weight.data.normal_(1.0, 0.02)
+            m.bias.data.fill_(0.0)
+        if classname.find('InstanceNorm') != -1:
             m.weight.data.normal_(1.0, 0.02)
             m.bias.data.fill_(0.0)
 

@@ -90,7 +90,7 @@ class Unet_G1(nn.Module):
         self.conv7 = ConvBlock(nfg*8, nfg*8, 3, 2, 1, norm_layer=norm_layer, use_dropout=use_dropout)
 
         if which_model == 'EFG':
-            self.convTran0 = ConvTransBlock(nfg*8 + 3, nfg*8, norm_layer=nn.BatchNorm2d, use_dropout=use_dropout, first_layer=False, last_layer=False)
+            self.convTran0 = ConvTransBlock(nfg*8 + 3, nfg*8, k=2, norm_layer=nn.BatchNorm2d, use_dropout=use_dropout, first_layer=False, last_layer=False)
 
         self.convTran1 = ConvTransBlock(nfg*8, nfg*8, norm_layer=nn.BatchNorm2d, use_dropout=use_dropout, first_layer=False, last_layer=False)
         self.convTran2 = ConvTransBlock(nfg*8*2, nfg*8, norm_layer=nn.BatchNorm2d, use_dropout=use_dropout, first_layer=False, last_layer=False)
@@ -143,12 +143,12 @@ class Unet_G1(nn.Module):
 
         out_res7 = self.res7(out_tran4)
         out_res8 = self.res8(out_res7)
-        out_tran5 = self.convTran5(out_res7)
-        out_tran6 = self.convTran6(out_res8)
+        out_tran5 = self.convTran5(out_res8)
+        out_tran6 = self.convTran6(out_tran5)
 
-        out_conv6 = self.conv6(out_tran6)
+        out_conv8 = self.conv8(out_tran6)
 
-        return out_conv6
+        return out_conv8
 
 class Unet_G2(nn.Module):
     """
@@ -285,14 +285,14 @@ class ResnetBlock(nn.Module):
         return out
 
 class ConvTransBlock(nn.Module):
-    def __init__(self, input_nc, output_nc, norm_layer=nn.BatchNorm2d, use_dropout=True, first_layer=False, last_layer=False):
+    def __init__(self, input_nc, output_nc, k=4, norm_layer=nn.BatchNorm2d, use_dropout=True, first_layer=False, last_layer=False):
         super(ConvTransBlock, self).__init__()
         if type(norm_layer) == functools.partial:
             use_bias = norm_layer.func == nn.InstanceNorm2d
         else:
             use_bias = norm_layer == nn.InstanceNorm2d
         model = []
-        model = [nn.ConvTranspose2d(input_nc, output_nc, kernel_size=4, stride=2, padding=1, bias=use_bias)]
+        model = [nn.ConvTranspose2d(input_nc, output_nc, kernel_size=k, stride=2, padding=1, bias=use_bias)]
         model += [norm_layer(output_nc)]
         if use_dropout:
             model += [nn.Dropout(0.5)]

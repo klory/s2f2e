@@ -42,15 +42,12 @@ class BaseModel():
         if label == 0:
             v = np.concatenate((v1, v0, v0), axis=1)
             v = np.repeat(v, batch_size, axis=0)
-            v = np.tile([0,0,1], batch_size).reshape(batch_size, 3)
         elif label == 1:
             v = np.concatenate((v0, v1, v0), axis=1)
             v = np.repeat(v, batch_size, axis=0)
-            v = np.tile([0,1,0], batch_size).reshape(batch_size, 3)
         if label == 2:
             v = np.concatenate((v0, v0, v1), axis=1)
             v = np.repeat(v, batch_size, axis=0)
-            v = np.tile([1,0,0], batch_size).reshape(batch_size, 3)
 
         return self.Tensor(v.astype(np.float))
     
