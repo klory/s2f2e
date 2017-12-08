@@ -21,6 +21,8 @@ class Option(object):
         parser.add_argument('--gpu_ids', type=str, default='0', help='gpu ids: e.g. 0  0,1,2, 0,2. use -1 for CPU')
 
         parser.add_argument("--dropout", type="bool", nargs="?", const=True, default=True, help="whether to use dropout.")
+        parser.add_argument("--norm", type=str, default="instance", help="instance or batchnorm.")
+
         parser.add_argument("--lam_cyc", type=int, default=10, help="lambda to balance loss_g_gan loss_g_idt and loss_g_l1.")
         parser.add_argument("--lam_idt", type=int, default=10, help="lambda to balance loss_g_gan loss_g_idt and loss_g_l1.")
         parser.add_argument("--lam_l1", type=int, default=10, help="lambda to balance loss_g_gan loss_g_idt and loss_g_l1.")

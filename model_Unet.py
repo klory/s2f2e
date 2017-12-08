@@ -39,7 +39,10 @@ class Unet(BaseModel):
             self.dropout = opt.dropout
             self.use_sigmoid = False
             self.batch_size = opt.batch_size
-            self.norm = functools.partial(nn.InstanceNorm2d, affine=True)
+            if opt.norm == 'instance':
+                self.norm = functools.partial(nn.InstanceNorm2d, affine=True)
+            else:
+                self.norm = functools.partial(nn.BatchNorm2d, affine=True)
             self.lr_ls = opt.learning_rate_ls
             self.lr_wgan = opt.learning_rate_wgan
 
@@ -51,6 +54,7 @@ class Unet(BaseModel):
             self.beta2_ls = opt.beta2_ls
             self.beta1_wgan = opt.beta1_wgan
             self.beta2_wgan = opt.beta2_wgan
+
             self.criterionGAN = nn.MSELoss()
             self.criterionL1 = nn.L1Loss()
             self.criterionCrossEnt = nn.CrossEntropyLoss()
@@ -70,6 +74,7 @@ class Unet(BaseModel):
         # intializer network
         self.net_D = NLayerDiscriminator(self.input_nc, self.batch_size, norm_layer=self.norm, use_sigmoid=self.use_sigmoid)
         self.net_D.apply(self.init_weights)
+
         self.net_G = Unet_G1(self.input_nc, self.output_nc, self.which_model, nfg=self.nfg, norm_layer=self.norm, use_dropout=self.dropout)
         self.net_G.apply(self.init_weights)
 
@@ -119,9 +124,11 @@ class Unet(BaseModel):
         if classname.find('BatchNorm') != -1:
             m.weight.data.normal_(1.0, 0.02)
             m.bias.data.fill_(0.0)
+        """
         if classname.find('InstanceNorm') != -1:
             m.weight.data.normal_(1.0, 0.02)
             m.bias.data.fill_(0.0)
+        """
 
     def set_input(self, input):
         if 'NFG' in self.model:
