@@ -185,15 +185,16 @@ class Unet(BaseModel):
         self.loss_D.backward(retain_graph=True)
 
     def backward_G(self):
-        v_D_fake, _ = self.net_D(self.fake_tgt)
-        v_D_real, _ = self.net_D(self.real_tgt)
+        v_D_fake, s_D_fake = self.net_D(self.fake_tgt)
+        v_D_real, s_D_real = self.net_D(self.real_tgt)
         self.loss_G_L1 = self.criterionL1(self.fake_tgt, self.real_tgt)
         if 'WGAN' in self.model:
-            self.loss_G_GAN = -torch.mean(v_D_fake)
+            self.loss_G_GAN = -torch.mean(s_D_fake)
         else:
-            self.loss_G_GAN = self.criterionGAN(v_D_fake, Variable(self.Tensor(v_D_real.size()).fill_(1.0), requires_grad=False))
+            self.loss_G_GAN = self.criterionGAN(s_D_fake, Variable(self.Tensor(v_D_real.size()).fill_(1.0), requires_grad=False))
 
-        self.loss_G = self.loss_G_GAN + self.loss_G_L1 * self.lam_l1
+        exp_label = Variable(self.expression_label)
+        self.loss_G = self.loss_G_GAN + self.loss_G_L1 * self.lam_l1 + self.criterionCrossEnt(v_D_fake, exp_label)
         #self.loss_G = self.loss_G_L1 * self.lam_l1
         self.loss_G.backward()
 
