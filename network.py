@@ -73,7 +73,7 @@ class Unet_G1(nn.Module):
 
         self.conv1 = nn.Sequential(nn.ReflectionPad2d(3),
                  nn.Conv2d(input_nc, nfg//2, kernel_size=7, padding=0, bias=use_bias),
-                 norm_layer(nfg//2), nn.Dropout(0.5))
+                 norm_layer(nfg//2))
         self.conv2 = ConvBlock(nfg//2, nfg, 3, 2, 1, norm_layer=norm_layer, use_dropout=use_dropout)
         self.conv3 = ConvBlock(nfg, nfg*2, 3, 2, 1, norm_layer=norm_layer, use_dropout=use_dropout)
 
@@ -90,7 +90,9 @@ class Unet_G1(nn.Module):
         self.conv7 = ConvBlock(nfg*8, nfg*8, 3, 2, 1, norm_layer=norm_layer, use_dropout=use_dropout)
 
         if which_model == 'EFG':
-            self.convTran0 = ConvTransBlock(nfg*8 + 3, nfg*8, k=2, norm_layer=nn.BatchNorm2d, use_dropout=use_dropout, first_layer=False, last_layer=False)
+            #self.conv0 = ConvBlock(nfg*8, nfg*8, 3, 2, 1, norm_layer=norm_layer, use_dropout=use_dropout)
+            self.linear0 = nn.Linear(nfg*8 + 3, nfg*8)
+            self.convTran0 = ConvTransBlock(nfg*8, nfg*8, k=2, norm_layer=nn.BatchNorm2d, use_dropout=use_dropout, first_layer=False, last_layer=False)
 
         self.convTran1 = ConvTransBlock(nfg*8, nfg*8, norm_layer=nn.BatchNorm2d, use_dropout=use_dropout, first_layer=False, last_layer=False)
         self.convTran2 = ConvTransBlock(nfg*8*2, nfg*8, norm_layer=nn.BatchNorm2d, use_dropout=use_dropout, first_layer=False, last_layer=False)
@@ -172,28 +174,28 @@ class Unet_G2(nn.Module):
         p = 1
 
         # Encoder
-        self.conv1 = ConvBlock(input_nc, nfg, k, s, p, norm_layer=norm_layer, use_dropout=not use_dropout)
-        self.conv2 = ConvBlock(nfg, nfg*2, k, s, p, norm_layer=None, use_dropout=not use_dropout)
+        self.conv1 = ConvBlock(input_nc, nfg, k, s, p, norm_layer=norm_layer, use_dropout=use_dropout)
+        self.conv2 = ConvBlock(nfg, nfg*2, k, s, p, norm_layer=None, use_dropout=use_dropout)
 
-        self.conv3 = ConvBlock(nfg*2, nfg*4, k, s, p, norm_layer=norm_layer, use_dropout=not use_dropout)
-        self.conv4 = ConvBlock(nfg*4, nfg*8, k, s, p, norm_layer=norm_layer, use_dropout=not use_dropout)
-        self.conv5 = ConvBlock(nfg*8, nfg*8, k, s, p, norm_layer=norm_layer, use_dropout=not use_dropout)
-        self.conv6 = ConvBlock(nfg*8, nfg*8, k, s, p, norm_layer=norm_layer, use_dropout=not use_dropout)
-        self.conv7 = ConvBlock(nfg*8, nfg*8, k, s, p, norm_layer=norm_layer, use_dropout=not use_dropout)
+        self.conv3 = ConvBlock(nfg*2, nfg*4, k, s, p, norm_layer=norm_layer, use_dropout=use_dropout)
+        self.conv4 = ConvBlock(nfg*4, nfg*8, k, s, p, norm_layer=norm_layer, use_dropout=use_dropout)
+        self.conv5 = ConvBlock(nfg*8, nfg*8, k, s, p, norm_layer=norm_layer, use_dropout=use_dropout)
+        self.conv6 = ConvBlock(nfg*8, nfg*8, k, s, p, norm_layer=norm_layer, use_dropout=use_dropout)
+        self.conv7 = ConvBlock(nfg*8, nfg*8, k, s, p, norm_layer=norm_layer, use_dropout=use_dropout)
 
         # For one-hot expression code
         if which_model == 'EFG':
             self.linear = nn.Linear(nfg*8+3, nfg*8)
 
         # Dncoder
-        self.convTran1 = ConvTransBlock(nfg*8, nfg*8, norm_layer=nn.BatchNorm2d, use_dropout=use_dropout, first_layer=False, last_layer=False)
-        self.convTran2 = ConvTransBlock(nfg*8*2, nfg*8, norm_layer=nn.BatchNorm2d, use_dropout=use_dropout, first_layer=False, last_layer=False)
-        self.convTran3 = ConvTransBlock(nfg*8*2, nfg*8, norm_layer=nn.BatchNorm2d, use_dropout=use_dropout, first_layer=False, last_layer=False)
-        self.convTran4 = ConvTransBlock(nfg*8*2, nfg*2*2, norm_layer=nn.BatchNorm2d, use_dropout=not use_dropout, first_layer=False, last_layer=False)
-        self.convTran5 = ConvTransBlock(nfg*4*2, nfg*1*2, norm_layer=nn.BatchNorm2d, use_dropout=not use_dropout, first_layer=False, last_layer=False)
-        self.convTran6 = ConvTransBlock(nfg*2*2, nfg, norm_layer=nn.BatchNorm2d, use_dropout=not use_dropout, first_layer=False, last_layer=False)
-        self.convTran7 = ConvTransBlock(nfg*1*2, nfg, norm_layer=nn.BatchNorm2d, use_dropout=not use_dropout, first_layer=False, last_layer=False)
-        self.conv8 = ConvBlock(nfg, 3, 3, 1, 1, norm_layer=nn.BatchNorm2d, use_dropout=not use_dropout, first_layer=False, last_layer=True)
+        self.convTran1 = ConvTransBlock(nfg*8, nfg*8, norm_layer=nn.BatchNorm2d, use_dropout=not use_dropout, first_layer=False, last_layer=False)
+        self.convTran2 = ConvTransBlock(nfg*8*2, nfg*8, norm_layer=nn.BatchNorm2d, use_dropout=not use_dropout, first_layer=False, last_layer=False)
+        self.convTran3 = ConvTransBlock(nfg*8*2, nfg*8, norm_layer=nn.BatchNorm2d, use_dropout=not use_dropout, first_layer=False, last_layer=False)
+        self.convTran4 = ConvTransBlock(nfg*8*2, nfg*2*2, norm_layer=nn.BatchNorm2d, use_dropout=use_dropout, first_layer=False, last_layer=False)
+        self.convTran5 = ConvTransBlock(nfg*4*2, nfg*1*2, norm_layer=nn.BatchNorm2d, use_dropout=use_dropout, first_layer=False, last_layer=False)
+        self.convTran6 = ConvTransBlock(nfg*2*2, nfg, norm_layer=nn.BatchNorm2d, use_dropout=use_dropout, first_layer=False, last_layer=False)
+        self.convTran7 = ConvTransBlock(nfg*1*2, nfg, norm_layer=nn.BatchNorm2d, use_dropout=use_dropout, first_layer=False, last_layer=False)
+        self.conv8 = ConvBlock(nfg, 3, 3, 1, 1, norm_layer=nn.BatchNorm2d, use_dropout=use_dropout, first_layer=False, last_layer=True)
 
     def forward(self, x, v):
         batch_size = x.size()[0]
@@ -233,10 +235,10 @@ class ConvBlock(nn.Module):
         model = [nn.Conv2d(input_nc, output_nc, kernel_size=k, stride=s, padding=p, bias=use_bias)]
         if norm_layer:
             model += [norm_layer(output_nc)]
-        if not last_layer:
-            model += [nn.LeakyReLU(0.2, True)]
         if use_dropout:
             model += [nn.Dropout(0.5)]
+        if not last_layer:
+            model += [nn.LeakyReLU(0.2, True)]
         if last_layer:
             model += [nn.Tanh()]
         self.model = nn.Sequential(*model)
@@ -262,7 +264,8 @@ class ResnetBlock(nn.Module):
             raise NotImplementedError('padding [%s] is not implemented' % padding_type)
 
         conv_block += [nn.Conv2d(dim, dim, kernel_size=3, padding=p, bias=use_bias),
-                       norm_layer(dim)]
+                       norm_layer(dim),
+                       nn.LeakyReLU(0.2, True)]
         if use_dropout:
             conv_block += [nn.Dropout(0.5)]
 
